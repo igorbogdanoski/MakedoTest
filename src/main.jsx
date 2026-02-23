@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 
 // --- Firebase Configuration ---
-// Note: In a real production app, these should come from environment variables
 const firebaseConfig = {
   apiKey: "AIzaSyDCLqjU3Stllbj4Ny3oDaM0NAQx3_UmiPY",
   authDomain: "makedotest-b3b7f.firebaseapp.com",
@@ -27,7 +26,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'makedo-test-v6-ultimate';
+const appId = 'makedo-test-v6-ultimate';
 
 // --- Компонента за прецизно СТЕМ рендерирање ---
 const RenderContent = ({ text, view, className = "" }) => {
@@ -141,9 +140,7 @@ const App = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-          await signInWithCustomToken(auth, window.__initial_auth_token);
-        } else { await signInAnonymously(auth); }
+        await signInAnonymously(auth);
       } catch (err) { console.error(err); }
     };
     initAuth();
@@ -157,7 +154,7 @@ const App = () => {
       setQuestionBank(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsubBank();
-  }, [user, appId]);
+  }, [user]);
 
   useEffect(() => {
     const timer = setInterval(() => setDemoStep((p) => (p + 1) % 3), 4000);
@@ -233,12 +230,225 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 relative overflow-x-hidden">
-      {/* ... rest of your existing JSX ... */}
-      <div className="max-w-7xl mx-auto px-8 pt-10">
-          <h1 className="text-2xl font-black">Editor View Placeholder</h1>
-          <p>This is where the editor content from index.html would go.</p>
-          <button onClick={handlePrint} className="bg-indigo-600 text-white p-2 rounded">Print Test</button>
+      
+      {showTutorial && (
+        <>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] z-[100] pointer-events-none"></div>
+          <div className="fixed inset-0 z-[150] flex items-end justify-center pb-20 pointer-events-none px-4">
+             <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] relative pointer-events-auto border border-slate-100 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                <button onClick={() => setShowTutorial(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 transition"><X size={24} /></button>
+                <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-100"><Target size={32} /></div>
+                <h2 className="text-3xl font-black mb-3 tracking-tighter text-slate-900 leading-none">{tutorialSteps[tutorialStep].title}</h2>
+                <p className="text-slate-500 leading-relaxed mb-10 text-lg font-medium">{tutorialSteps[tutorialStep].text}</p>
+                <div className="flex items-center justify-between">
+                   <div className="flex gap-2">
+                      {tutorialSteps.map((_, i) => (
+                        <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === tutorialStep ? 'w-10 bg-indigo-600' : 'w-2 bg-slate-200'}`}></div>
+                      ))}
+                   </div>
+                   <button 
+                    onClick={() => tutorialStep < tutorialSteps.length - 1 ? setTutorialStep(s => s + 1) : setShowTutorial(false)} 
+                    className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-600 transition"
+                   >
+                     {tutorialStep < tutorialSteps.length - 1 ? 'Следно' : 'Започни'}
+                   </button>
+                </div>
+             </div>
+          </div>
+        </>
+      )}
+
+      <nav id="main-nav" className={`bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-[110] shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 0 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl bg-white' : ''}`}>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
+          <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Zap size={20} /></div>
+          <span className="font-black text-lg uppercase tracking-tighter">МакедоТест</span>
+        </div>
+        <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
+          {['editor', 'preview', 'answerKey'].map(v => (
+            <button key={v} onClick={() => setView(v)} className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase transition ${view === v ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
+              {v === 'editor' ? 'Уреди' : v === 'preview' ? 'Тест' : 'Клуч'}
+            </button>
+          ))}
+        </div>
+        <div id="action-buttons" className={`flex items-center gap-3 transition-all duration-500 ${showTutorial && tutorialStep === 5 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1' : ''}`}>
+          <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> Печати</button>
+          <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? 'Преглед' : 'Поставки'}</button>
+        </div>
+      </nav>
+
+      <div className="flex max-w-[1600px] mx-auto min-h-[calc(100vh-80px)]">
+        <aside id="toolbox-sidebar" className={`w-80 border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}>
+          <div className="space-y-10">
+            <div>
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Plus size={12} /> Додај задача</h3>
+              <div className="grid grid-cols-1 gap-2.5">
+                {questionTypes.map(type => (
+                  <button key={type.id} onClick={() => addQuestion(type.id)} className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-left shadow-sm">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">{type.icon}</div>
+                    <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-900">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div id="bank-tab" className={`transition-all duration-500 ${showTutorial && tutorialStep === 1 ? 'ring-4 ring-indigo-500 bg-indigo-50 p-4 rounded-3xl' : ''}`}>
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><History size={12} /> Банка ({questionBank.length})</h3>
+               <div className="space-y-3">
+                  {questionBank.map(bq => (
+                    <div key={bq.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative group cursor-pointer hover:bg-white hover:border-indigo-100 transition shadow-sm" onClick={() => setQuestions([...questions, {...bq, id: Date.now()}])}>
+                       <p className="text-[10px] font-bold text-slate-500 line-clamp-2 leading-relaxed"><RenderContent text={bq.text} /></p>
+                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'question_bank', bq.id)); }} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"><Trash2 size={12} /></button>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex-1 p-12 bg-slate-50/50 flex flex-col items-center">
+          <div id="advanced-settings" className={`w-full max-w-[800px] mb-8 bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-wrap gap-6 items-center justify-center shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 3 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120]' : ''}`}>
+             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+                <Layout size={14} className="text-slate-400" />
+                <select value={testInfo.alignment} onChange={e => setTestInfo({...testInfo, alignment: e.target.value})} className="bg-transparent text-[11px] font-black uppercase outline-none cursor-pointer">
+                   <option value="left">Лево порамнување</option>
+                   <option value="justify">Оправдано (Justify)</option>
+                </select>
+             </div>
+             <button onClick={() => setTestInfo({...testInfo, zipGrade: !testInfo.zipGrade})} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.zipGrade ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}>
+                <Hash size={14} />
+                <span className="text-[11px] font-black uppercase">ZipGrade Стил</span>
+             </button>
+             <button onClick={() => setTestInfo({...testInfo, subNumbering: !testInfo.subNumbering})} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.subNumbering ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}>
+                <ListOrdered size={14} />
+                <span className="text-[11px] font-black uppercase">Под-нумерирање</span>
+             </button>
+          </div>
+
+          <div id="test-paper" className={`w-[210mm] min-h-[297mm] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-[20mm] relative flex flex-col transition-all duration-500 ${showTutorial && tutorialStep === 4 ? 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]' : ''}`}>
+             {testInfo.watermark && <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] text-[120px] font-black uppercase select-none">{testInfo.watermark}</div>}
+             
+             <header className="relative z-10 mb-16 border-b-4 border-slate-900 pb-12">
+                <div className="flex justify-between items-start mb-10">
+                   <div className="space-y-1.5 flex-1 pr-10">
+                      {view === 'editor' ? (
+                        <>
+                          <input className="block w-full text-xs font-black uppercase tracking-widest bg-slate-50 rounded px-2 py-1 outline-none border-b-2 border-transparent focus:border-indigo-500" value={`${testInfo.schoolType} ${testInfo.school}`} onChange={e => {
+                            const val = e.target.value.split(' ');
+                            setTestInfo({...testInfo, schoolType: val[0], school: val.slice(1).join(' ')});
+                          }} />
+                          <input className="block w-full text-4xl font-black tracking-tighter text-slate-900 bg-slate-50 rounded px-2 py-2 mt-2 outline-none border-b-2 border-transparent focus:border-indigo-500" value={testInfo.subject} onChange={e => setTestInfo({...testInfo, subject: e.target.value})} />
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none">{testInfo.schoolType} {testInfo.school}</span>
+                          <h1 className="text-5xl font-black text-slate-900 tracking-tighter mt-4 leading-none">{testInfo.subject}</h1>
+                        </>
+                      )}
+                   </div>
+                   <div className="text-right flex flex-col items-end">
+                      <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl flex items-center gap-3 shadow-xl">
+                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Одд.</span>
+                         <input className="bg-transparent text-xl font-black w-10 text-center outline-none" value={testInfo.grade} onChange={e => setTestInfo({...testInfo, grade: e.target.value})} />
+                      </div>
+                      <span className="text-[10px] font-black text-slate-300 block mt-4 uppercase tracking-widest">Датум: {testInfo.date}</span>
+                   </div>
+                </div>
+                {view !== 'answerKey' && (
+                  <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
+                    <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Ученик:</div>
+                    <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right">Поени: _____ / {totalPoints}</div>
+                  </div>
+                )}
+             </header>
+
+             <div className="relative z-10 space-y-20 flex-grow">
+               {questions.map((q, idx) => {
+                 let displayNum = (idx + 1).toString();
+                 if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
+                 return (
+                 <div key={q.id} className="relative group">
+                    {view === 'editor' && (
+                       <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
+                          <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
+                          <button onClick={() => saveToBank(q)} className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition shadow-sm" title="Зачувај"><Save size={16} /></button>
+                          <div className="bg-white p-2 rounded-xl border flex flex-col items-center shadow-sm">
+                             <span className="text-[8px] font-black text-slate-400 uppercase">Бод</span>
+                             <input type="number" value={q.points} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, points: e.target.value} : qu))} className="w-8 text-xs font-black text-center outline-none bg-slate-50 rounded" />
+                          </div>
+                       </div>
+                    )}
+                    <div className="flex gap-6 mb-6 items-start font-sans">
+                       <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
+                       <div className="flex-1">
+                          {view === 'editor' ? (
+                             <textarea rows="1" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder="Внесете задача..." />
+                          ) : (
+                            <div className={`text-lg font-bold text-slate-800 leading-relaxed pr-10 ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`}>
+                               <RenderContent text={q.text} view={view} />
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                    <div className="ml-16 font-sans">
+                       {q.type === 'multiple' && (
+                          <div className={`grid gap-4 grid-cols-${q.columns || 1}`}>
+                             {q.options.map((opt, oIdx) => (
+                                <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
+                                   <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : 'rounded-full'} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
+                                      <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
+                                   </div>
+                                   {view === 'editor' ? <input value={opt} onChange={e => {
+                                      const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                                   }} className="bg-transparent border-b w-full outline-none text-base font-bold" /> : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
+                                   {view === 'editor' && <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu))} className={`p-1 transition ${q.correct === oIdx ? 'text-emerald-500' : 'text-slate-200'}`}><CheckCircle2 size={18} /></button>}
+                                </div>
+                             ))}
+                          </div>
+                       )}
+                       {(q.type === 'essay' || q.type === 'short-answer') && (
+                          <div className="space-y-6 mt-8">
+                             {[...Array(q.type === 'essay' ? 10 : 3)].map((_, i) => (
+                                <div key={i} className="border-b-2 border-slate-100 border-dotted w-full h-10" />
+                             ))}
+                          </div>
+                       )}
+                    </div>
+                 </div>
+               )})}
+             </div>
+
+             <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{testInfo.schoolType} {testInfo.school} • v6.0 Pro</p>
+                <div className="text-center w-80">
+                   <div className="border-b-4 border-slate-900 mb-4 h-16" />
+                   <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">Потпис на Наставник</p>
+                </div>
+             </footer>
+          </div>
+        </main>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+        body { font-family: 'Manrope', sans-serif; overflow-x: hidden; }
+
+        @media print {
+          @page { margin: 0; size: A4; }
+          body { margin: 0 !important; padding: 0 !important; background: white !important; }
+          #main-nav, aside, .print\\:hidden, #nav-tabs, #action-buttons, .fixed { display: none !important; }
+          #test-canvas { 
+            margin: 0 !important; padding: 0 !important; width: 100% !important; 
+            position: absolute !important; left: 0 !important; top: 0 !important;
+            box-shadow: none !important; transform: none !important;
+            z-index: 1 !important;
+          }
+          #test-paper { border: none !important; border-radius: 0 !important; box-shadow: none !important; width: 100% !important; min-height: 100vh !important; }
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; }
+      `}} />
     </div>
   );
 };
