@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, query, addDoc, deleteDoc } from 'firebase/firestore';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc } from 'firebase/firestore';
 import { 
   Plus, Trash2, Printer, Eye, Settings, Layout, Type, CheckSquare, Split, 
   ListOrdered, HelpCircle, Minus, List as ListIcon, Square, Table as TableIcon, 
@@ -10,8 +10,13 @@ import {
   KeyRound, School, Shuffle, Columns, Info, Beaker, Sigma, MoveVertical,
   ChevronDown, BookOpen, Languages, Globe, History, Zap, Sparkles, ArrowRight,
   Cloud, Share2, Search, ExternalLink, X, Play, MousePointer2, AlignJustify, 
-  Copy, AlertCircle, Check, Hash, RotateCcw, Target, Library, Save, HelpCircle as HelpIcon
+  Copy, AlertCircle, Check, Hash, RotateCcw, Target, Library, Save
 } from 'lucide-react';
+
+// Import refactored components
+import RenderContent from './components/RenderContent';
+import LandingPage from './components/LandingPage';
+import Question from './components/Question';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -28,74 +33,15 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'makedo-test-v6-ultimate';
 
-// --- Компонента за прецизно СТЕМ рендерирање ---
-const RenderContent = ({ text, view, className = "" }) => {
-  if (!text) return null;
-  
-  const parts = text.split(/(\$.*?\$|\{.*?\}|\[.*?\])/g);
-
-  return (
-    <span className={className}>
-      {parts.map((part, i) => {
-        if (!part) return null;
-
-        if (part.startsWith('$') && part.endsWith('$')) {
-          const formula = part.slice(1, -1)
-            .replace(/\\sqrt\{(.+?)\}/g, '√$1')
-            .replace(/\\sqrt/g, '√')
-            .replace(/\^\{(.+?)\}/g, '<sup>$1</sup>')
-            .replace(/\^(\d+)/g, '<sup>$1</sup>')
-            .replace(/_\{(.+?)\}/g, '<sub>$1</sub>')
-            .replace(/_(\d+)/g, '<sub>$1</sub>')
-            .replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '($1/$2)')
-            .replace(/\\cdot/g, '·')
-            .replace(/\\approx/g, '≈')
-            .replace(/\\pi/g, 'π')
-            .replace(/\\pm/g, '±');
-
-          return (
-            <span 
-              key={`math-${i}`} 
-              className="font-serif italic text-indigo-700 bg-indigo-50/50 px-1 rounded mx-0.5 border-b border-indigo-200 inline-block leading-none"
-              dangerouslySetInnerHTML={{ __html: formula }}
-            />
-          );
-        }
-
-        if (part.startsWith('{') && part.endsWith('}')) {
-          const content = part.slice(1, -1);
-          const options = content.split('|');
-          if (view === 'answerKey') {
-            return <span key={`sel-${i}`} className="mx-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-black border border-emerald-300 underline shadow-sm">{options[0]}</span>;
-          }
-          return <span key={`sel-${i}`} className="mx-1 px-3 py-1 rounded-xl border-2 border-slate-200 bg-slate-50 italic text-slate-400 text-sm font-medium">избери одговор</span>;
-        }
-
-        if (part.startsWith('[') && part.endsWith(']')) {
-          const answer = part.slice(1, -1);
-          if (view === 'answerKey') {
-            return <span key={`blank-${i}`} className="mx-1 font-bold text-indigo-600 underline decoration-indigo-400 decoration-2">{answer}</span>;
-          }
-          return <span key={`blank-${i}`} className="inline-block border-b-2 border-slate-900 min-w-[120px] mx-1 h-1 shadow-sm"></span>;
-        }
-
-        return <span key={`txt-${i}`}>{part}</span>;
-      })}
-    </span>
-  );
-};
-
 const App = () => {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('landing'); 
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
-  const [sharedTests, setSharedTests] = useState([]);
   const [questionBank, setQuestionBank] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [duplicateAlert, setDuplicateAlert] = useState(null);
-  const [showHelp, setShowHelp] = useState(null); // ID of question showing help
+  const [showHelp, setShowHelp] = useState(null);
 
   const helpContent = {
     'multiple': 'Класичен формат со еден точен одговор. Кликнете на кругот за да го означите точниот.',
@@ -106,7 +52,7 @@ const App = () => {
     'short-answer': 'Задачи кои бараат неколку зборови или една реченица како одговор.',
     'essay': 'За подолги одговори. Бројот на линии може да се прилагоди во поставките.',
     'matching': 'Поврзување на два поими во парови.',
-    'ordering': 'Учениците треба да го внесат правилниот редослед (1, 2, 3...) пред секој поим.',
+    'ordering': 'Учениците треба да го внесат правилниот редослед (1, 2, 3...) перед секој поим.',
     'list': 'Набројување на поими или факти.',
     'table': 'Кликнете на келиите за да ги претворите во полиња за внесување на одговор.',
     'multi-part': 'Комплексни задачи поделени на под-делови (а, б, в) со посебни бодови.',
@@ -150,6 +96,7 @@ const App = () => {
     { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни' },
     { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни' },
     { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични' },
+    { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични' },
   ];
 
   const tutorialSteps = [
@@ -163,9 +110,7 @@ const App = () => {
 
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (err) { console.error(err); }
+      try { await signInAnonymously(auth); } catch (err) { console.error(err); }
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -224,52 +169,7 @@ const App = () => {
     }));
   };
 
-  const LandingPage = () => (
-    <div className="min-h-screen bg-white relative overflow-hidden font-sans">
-      <nav className="px-8 py-6 flex justify-between items-center max-w-7xl mx-auto relative z-10">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-          <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-100"><Zap className="text-white" size={32} /></div>
-          <span className="text-2xl font-black tracking-tighter uppercase text-slate-900">МакедоТест</span>
-        </div>
-        <button onClick={() => setView('editor')} className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-xl hover:scale-105 transition">Едитор</button>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-8 pt-20 grid lg:grid-cols-2 gap-16 items-center relative z-10">
-        <div className="space-y-10 animate-in slide-in-from-left duration-700">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full">
-            <Sparkles size={16} className="text-indigo-600" />
-            <span className="text-xs font-black text-indigo-700 uppercase tracking-widest tracking-tighter">v6.0 Pro со СТЕМ поддршка</span>
-          </div>
-          <h1 className="text-7xl font-black text-slate-900 leading-[1.1] tracking-tighter text-balance">Креирајте <span className="text-indigo-600">професионални</span> тестови во минути.</h1>
-          <p className="text-xl text-slate-500 leading-relaxed max-w-md font-medium">Најнапредниот софтвер за наставници во Македонија. Подготвен за печатење на А4.</p>
-          <div className="flex gap-6">
-            <button onClick={() => setView('editor')} className="bg-indigo-600 text-white px-10 py-5 rounded-3xl font-black shadow-2xl flex items-center gap-3 hover:bg-indigo-700 transition active:scale-95 text-lg">Креирај нов тест <ArrowRight size={22} /></button>
-            <button onClick={() => { setView('editor'); setShowTutorial(true); setTutorialStep(0); }} className="bg-white border-2 border-slate-100 px-10 py-5 rounded-3xl font-black flex items-center gap-3 hover:border-indigo-100 transition text-lg"><Play size={22} /> Види како работи</button>
-          </div>
-        </div>
-
-        <div className="relative group cursor-pointer" onClick={() => setView('editor')}>
-          <div className="absolute -inset-10 bg-indigo-500/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="relative bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 flex flex-col gap-10 transform group-hover:scale-[1.02] transition-all duration-500">
-             <div className="flex justify-between items-center">
-                <div className="bg-indigo-50 text-indigo-600 px-5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest">v6.0 ДЕМО</div>
-                <div className="flex gap-2">
-                   {[0, 1, 2].map(i => <div key={i} className={`h-2.5 rounded-full transition-all duration-500 ${demoStep === i ? 'bg-indigo-500 w-6' : 'bg-slate-100 w-2.5'}`} />)}
-                </div>
-             </div>
-             <div className="min-h-[140px] flex items-center text-4xl font-black text-slate-900 leading-tight">
-                {demoStep === 0 ? <RenderContent text="Сила $F = m \\cdot a$" /> : demoStep === 1 ? <RenderContent text="$\\sqrt{144} + 2^3$" /> : <RenderContent text="Процес: [фотосинтеза]" />}
-             </div>
-             <div className="bg-slate-50/50 p-10 rounded-[2.5rem] border border-dashed border-slate-200 flex items-center justify-center text-slate-400 font-bold italic text-xl shadow-inner">
-                Пример за СТЕМ приказ
-             </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-
-  if (view === 'landing') return <LandingPage />;
+  if (view === 'landing') return <LandingPage setView={setView} setShowTutorial={setShowTutorial} setTutorialStep(setTutorialStep) demoStep={demoStep} />;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 relative overflow-x-hidden">
@@ -301,6 +201,7 @@ const App = () => {
         </>
       )}
 
+      {/* Navbar */}
       <nav id="main-nav" className={`bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-[110] shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 0 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl bg-white' : ''}`}>
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
           <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Zap size={20} /></div>
@@ -360,6 +261,7 @@ const App = () => {
       </nav>
 
       <div className="flex max-w-[1600px] mx-auto min-h-[calc(100vh-80px)]">
+        {/* Sidebar */}
         <aside id="toolbox-sidebar" className={`w-80 border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}>
           <div className="space-y-10">
             <div>
@@ -442,7 +344,7 @@ const App = () => {
                       <span className="text-[10px] font-black text-slate-300 block mt-4 uppercase tracking-widest">Датум: {testInfo.date}</span>
                    </div>
                 </div>
-                {view !== 'answerKey' && (
+                {view !== 'answerKey' && view !== 'answerSheet' && (
                   <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
                     <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Ученик:</div>
                     <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right">Поени: _____ / {totalPoints}</div>
@@ -471,246 +373,24 @@ const App = () => {
                    ))}
                  </div>
                ) : (
-                 questions.map((q, idx) => {
-                 let displayNum = (idx + 1).toString();
-                 if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
-                 const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
-
-                 return (
-                 <div key={q.id} className={`relative group p-4 rounded-3xl transition-all ${isDuplicate ? 'bg-red-50/50 ring-2 ring-red-100 mb-10' : ''}`}>
-                    {view === 'editor' && isDuplicate && (
-                      <div className="absolute -top-4 right-0 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-2 shadow-lg animate-bounce">
-                        <AlertCircle size={12} /> Постои дупликат задача!
-                      </div>
-                    )}
-                    {view === 'editor' && (
-                       <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
-                          <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
-                          <button onClick={() => saveToBank(q)} className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition shadow-sm" title="Зачувај"><Save size={16} /></button>
-                          <button onClick={() => setShowHelp(showHelp === q.id ? null : q.id)} className={`p-2.5 rounded-xl transition shadow-sm ${showHelp === q.id ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white'}`} title="Помош"><AlertCircle size={16} /></button>
-                          {(q.type === 'multiple' || q.type === 'checklist') && (
-                            <button onClick={() => randomizeAnswers(q.id)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition shadow-sm" title="Измешај одговори"><Shuffle size={16} /></button>
-                          )}
-                          <div className="bg-white p-2 rounded-xl border flex flex-col items-center shadow-sm">
-                             <span className="text-[8px] font-black text-slate-400 uppercase">Бод</span>
-                             <input type="number" value={q.points} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, points: e.target.value} : qu))} className="w-8 text-xs font-black text-center outline-none bg-slate-50 rounded" />
-                          </div>
-                       </div>
-                    )}
-                    {view === 'editor' && showHelp === q.id && (
-                      <div className="absolute left-0 -top-12 w-full bg-amber-50 border border-amber-200 p-3 rounded-2xl flex gap-3 items-center animate-in slide-in-from-bottom-2 duration-300 z-30">
-                        <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
-                        <p className="text-xs font-bold text-amber-800">{helpContent[q.type] || 'Нема достапни информации за овој тип.'}</p>
-                        <button onClick={() => setShowHelp(null)} className="ml-auto text-amber-400 hover:text-amber-600"><X size={14} /></button>
-                      </div>
-                    )}
-                    <div className="flex gap-6 mb-6 items-start font-sans">
-                       <div className="flex flex-col items-center gap-1">
-                          {view === 'editor' && testInfo.subNumbering ? (
-                            <input 
-                              value={q.subNum || (idx + 1)} 
-                              onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, subNum: e.target.value} : qu))}
-                              className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xs font-black text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-lg"
-                            />
-                          ) : (
-                            <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
-                          )}
-                          {view === 'editor' && testInfo.subNumbering && <span className="text-[8px] font-black uppercase text-slate-400">Број</span>}
-                       </div>
-                       <div className="flex-1">
-                          {view === 'editor' ? (
-                             <div className="space-y-4">
-                               <textarea rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
-                               {q.type === 'selection' && (
-                                 <div className="flex gap-2 p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-                                   <HelpCircle size={14} className="text-indigo-400 mt-0.5" />
-                                   <p className="text-[10px] font-medium text-indigo-600 leading-normal">Користете <code className="bg-white px-1 rounded border border-indigo-200">{"{опција1|опција2}"}</code> за да креирате паѓачко мени во текстот. Првата опција е секогаш точната.</p>
-                                 </div>
-                               )}
-                             </div>
-                          ) : (
-                            <div className={`text-lg font-bold text-slate-800 leading-relaxed pr-10 ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`}>
-                               <RenderContent text={q.text} view={view} />
-                            </div>
-                          )}
-                       </div>
-                    </div>
-                    <div className="ml-16 font-sans">
-                       {(q.type === 'multiple' || q.type === 'checklist') && (
-                          <div className={`grid gap-4 grid-cols-${q.columns || 1}`}>
-                             {q.options.map((opt, oIdx) => (
-                                <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
-                                   <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : (q.type === 'checklist' ? 'rounded-lg' : 'rounded-full')} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
-                                      <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
-                                   </div>
-                                   {view === 'editor' ? <input value={opt} onChange={e => {
-                                      const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                                   }} className="bg-transparent border-b w-full outline-none text-base font-bold" /> : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
-                                   {view === 'editor' && (
-                                     <button onClick={() => {
-                                       if (q.type === 'multiple') {
-                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu));
-                                       } else {
-                                         const cur = q.corrects || [];
-                                         const next = cur.includes(oIdx) ? cur.filter(c => c !== oIdx) : [...cur, oIdx];
-                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, corrects: next} : qu));
-                                       }
-                                     }} className={`p-1 transition ${(q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'text-emerald-500' : 'text-slate-200'}`}>
-                                       {q.type === 'checklist' ? <CheckSquare size={18} /> : <CheckCircle2 size={18} />}
-                                     </button>
-                                   )}
-                                </div>
-                             ))}
-                             {view === 'editor' && (
-                               <button onClick={() => {
-                                 const n = [...q.options, ''];
-                                 setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                               }} className="text-[10px] font-black uppercase text-indigo-600 hover:underline flex items-center gap-1"><Plus size={12} /> Додај опција</button>
-                             )}
-                          </div>
-                       )}
-                       {q.type === 'true-false' && (
-                          <div className={`flex ${q.layout === 'vertical' ? 'flex-col w-40' : 'flex-row w-full'} gap-4`}>
-                             {['Точно', 'Неточно'].map((opt, oIdx) => (
-                                <div key={oIdx} className={`flex-1 flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
-                                   <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white'}`}>
-                                      {oIdx === 0 ? 'Т' : 'Н'}
-                                   </div>
-                                   <span className="text-sm font-bold text-slate-700">{opt}</span>
-                                   {view === 'editor' && (
-                                     <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu))} className={`p-1 ml-auto transition ${q.correct === oIdx ? 'text-emerald-500' : 'text-slate-200'}`}>
-                                       <CheckCircle2 size={18} />
-                                     </button>
-                                   )}
-                                </div>
-                             ))}
-                             {view === 'editor' && (
-                               <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, layout: q.layout === 'vertical' ? 'horizontal' : 'vertical'} : qu))} className="p-2 bg-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 transition" title="Промени распоред">
-                                  <MoveVertical size={16} className={q.layout === 'vertical' ? 'rotate-90' : ''} />
-                               </button>
-                             )}
-                          </div>
-                       )}
-                       {q.type === 'multi-match' && (
-                          <div className="space-y-4">
-                             {view === 'editor' ? (
-                               <div className="space-y-3">
-                                 {(q.matches || [{s:'', a:''}]).map((m, mIdx) => (
-                                   <div key={mIdx} className="flex gap-4 items-center">
-                                      <input placeholder="Изјава..." value={m.s} onChange={e => {
-                                        const nm = [...(q.matches || [])]; nm[mIdx].s = e.target.value;
-                                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                                      }} className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100 font-bold" />
-                                      <ArrowRight size={16} className="text-slate-300" />
-                                      <input placeholder="Одговор..." value={m.a} onChange={e => {
-                                        const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
-                                        setQuestions(questions.map(qu => qu.id === qu.id ? {...qu, matches: nm} : qu));
-                                      }} className="w-40 bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
-                                   </div>
-                                 ))}
-                                 <button onClick={() => {
-                                   const nm = [...(q.matches || [{s:'', a:''}]), {s:'', a:''}];
-                                   setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                                 }} className="text-[10px] font-black uppercase text-indigo-600 hover:underline flex items-center gap-1"><Plus size={12} /> Додај ред</button>
-                               </div>
-                             ) : (
-                               <div className="grid grid-cols-2 gap-10">
-                                  <div className="space-y-6">
-                                     {(q.matches || []).map((m, mIdx) => (
-                                       <div key={mIdx} className="flex gap-4 items-center border-b border-slate-100 pb-2">
-                                          <span className="text-xs font-black text-slate-400">{mIdx + 1}.</span>
-                                          <RenderContent text={m.s} view={view} className="text-base font-bold" />
-                                       </div>
-                                     ))}
-                                  </div>
-                                  <div className="space-y-6">
-                                     {/* Shuffle answers for the test view */}
-                                     {(q.matches || []).map((m, mIdx) => (
-                                       <div key={mIdx} className="flex gap-4 items-center border-b border-slate-100 pb-2">
-                                          <span className="w-8 h-8 rounded-lg border-2 border-slate-800 flex items-center justify-center text-xs font-black">{String.fromCharCode(65 + mIdx)}</span>
-                                          {view === 'answerKey' ? <span className="text-base font-black text-emerald-600 underline">{m.a}</span> : <div className="h-6 w-32 border-b-2 border-slate-200" />}
-                                       </div>
-                                     ))}
-                                  </div>
-                               </div>
-                             )}
-                          </div>
-                       )}
-                       {q.type === 'table' && (
-                          <div className="space-y-4">
-                             {view === 'editor' && (
-                               <div className="flex gap-4 mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                  <div className="flex flex-col gap-1">
-                                     <span className="text-[8px] font-black uppercase text-slate-400">Редови</span>
-                                     <input type="number" min="1" max="10" value={q.tableData?.rows || 3} onChange={e => {
-                                       const rows = parseInt(e.target.value);
-                                       const data = q.tableData?.data || {};
-                                       setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, rows, data}} : qu));
-                                     }} className="w-12 p-2 rounded-lg border text-xs font-bold" />
-                                  </div>
-                                  <div className="flex flex-col gap-1">
-                                     <span className="text-[8px] font-black uppercase text-slate-400">Колони</span>
-                                     <input type="number" min="1" max="6" value={q.tableData?.cols || 3} onChange={e => {
-                                       const cols = parseInt(e.target.value);
-                                       const data = q.tableData?.data || {};
-                                       setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, cols, data}} : qu));
-                                     }} className="w-12 p-2 rounded-lg border text-xs font-bold" />
-                                  </div>
-                                  <div className="flex-1 flex items-center justify-end text-[10px] font-bold text-slate-400 italic">Кликни на келија за да ја означиш како одговор</div>
-                               </div>
-                             )}
-                             <div className="overflow-x-auto rounded-xl border-2 border-slate-900 shadow-[4px_4px_0_0_#0f172a]">
-                                <table className="w-full border-collapse">
-                                   <tbody>
-                                      {[...Array(q.tableData?.rows || 3)].map((_, r) => (
-                                        <tr key={r}>
-                                           {[...Array(q.tableData?.cols || 3)].map((_, c) => {
-                                             const cellId = `${r}-${c}`;
-                                             const cell = q.tableData?.data?.[cellId] || { val: '', isAns: false };
-                                             return (
-                                               <td key={c} className="border border-slate-200 p-0 min-w-[100px]">
-                                                  {view === 'editor' ? (
-                                                    <div className={`relative group/cell ${cell.isAns ? 'bg-emerald-50' : 'bg-white'}`}>
-                                                       <input value={cell.val} onChange={e => {
-                                                         const data = {...(q.tableData?.data || {})};
-                                                         data[cellId] = {...cell, val: e.target.value};
-                                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
-                                                       }} className="w-full p-4 text-sm font-bold bg-transparent outline-none focus:bg-indigo-50/30" />
-                                                       <button onClick={() => {
-                                                         const data = {...(q.tableData?.data || {})};
-                                                         data[cellId] = {...cell, isAns: !cell.isAns};
-                                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
-                                                       }} className={`absolute top-1 right-1 p-1 rounded transition ${cell.isAns ? 'text-emerald-500' : 'text-slate-200 group-hover/cell:text-slate-400'}`}>
-                                                          <Check size={12} strokeWidth={3} />
-                                                       </button>
-                                                    </div>
-                                                  ) : (
-                                                    <div className="p-4 min-h-[50px] flex items-center justify-center text-sm font-bold">
-                                                       {cell.isAns ? (
-                                                         view === 'answerKey' ? <span className="text-emerald-600 underline">{cell.val}</span> : <div className="border-b-2 border-slate-900 w-full h-4 mx-2" />
-                                                       ) : <RenderContent text={cell.val} view={view} />}
-                                                    </div>
-                                                  )}
-                                               </td>
-                                             );
-                                           })}
-                                        </tr>
-                                      ))}
-                                   </tbody>
-                                </table>
-                             </div>
-                          </div>
-                       )}
-                       {(q.type === 'essay' || q.type === 'short-answer') && (
-                          <div className="space-y-6 mt-8">
-                             {[...Array(q.type === 'essay' ? 10 : 3)].map((_, i) => (
-                                <div key={i} className="border-b-2 border-slate-100 border-dotted w-full h-10" />
-                             ))}
-                          </div>
-                       )}
-                    </div>
-                 </div>
-               )})}
+                 questions.map((q, idx) => (
+                   <Question 
+                     key={q.id}
+                     q={q} 
+                     idx={idx} 
+                     view={view} 
+                     testInfo={testInfo} 
+                     questions={questions}
+                     setQuestions={setQuestions}
+                     saveToBank={saveToBank}
+                     showHelp={showHelp}
+                     setShowHelp={setShowHelp}
+                     helpContent={helpContent}
+                     randomizeAnswers={randomizeAnswers}
+                     duplicates={duplicates}
+                   />
+                 ))
+               )}
              </div>
 
              <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
@@ -743,6 +423,12 @@ const App = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; }
       `}} />
+      
+      {duplicateAlert && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl animate-in slide-in-from-bottom-5 z-[200]">
+          {duplicateAlert}
+        </div>
+      )}
     </div>
   );
 };
