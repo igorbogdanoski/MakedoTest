@@ -15,13 +15,13 @@ import {
 
 // --- Firebase Configuration ---
 // Note: In a real production app, these should come from environment variables
-const firebaseConfig = window.__firebase_config ? JSON.parse(window.__firebase_config) : {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+const firebaseConfig = {
+  apiKey: "AIzaSyDCLqjU3Stllbj4Ny3oDaM0NAQx3_UmiPY",
+  authDomain: "makedotest-b3b7f.firebaseapp.com",
+  projectId: "makedotest-b3b7f",
+  storageBucket: "makedotest-b3b7f.firebasestorage.app",
+  messagingSenderId: "175945188992",
+  appId: "1:175945188992:web:6efe266baa367df9710865"
 };
 
 const app = initializeApp(firebaseConfig);
