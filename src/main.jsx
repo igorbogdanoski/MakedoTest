@@ -207,6 +207,23 @@ const App = () => {
     setTimeout(() => setDuplicateAlert(null), 2000);
   };
 
+  const randomizeQuestions = () => {
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    setQuestions(shuffled);
+    setDuplicateAlert("Прашањата се измешани!");
+    setTimeout(() => setDuplicateAlert(null), 2000);
+  };
+
+  const randomizeAnswers = (qId) => {
+    setQuestions(questions.map(q => {
+      if (q.id === qId && q.options) {
+        const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+        return { ...q, options: shuffledOptions };
+      }
+      return q;
+    }));
+  };
+
   const LandingPage = () => (
     <div className="min-h-screen bg-white relative overflow-hidden font-sans">
       <nav className="px-8 py-6 flex justify-between items-center max-w-7xl mx-auto relative z-10">
@@ -290,9 +307,9 @@ const App = () => {
           <span className="font-black text-lg uppercase tracking-tighter">МакедоТест</span>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-          {['editor', 'preview', 'answerKey'].map(v => (
+          {['editor', 'preview', 'answerKey', 'answerSheet'].map(v => (
             <button key={v} onClick={() => setView(v)} className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase transition ${view === v ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
-              {v === 'editor' ? 'Уреди' : v === 'preview' ? 'Тест' : 'Клуч'}
+              {v === 'editor' ? 'Уреди' : v === 'preview' ? 'Тест' : v === 'answerKey' ? 'Клуч' : 'Лист'}
             </button>
           ))}
         </div>
@@ -390,6 +407,10 @@ const App = () => {
                 <ListOrdered size={14} />
                 <span className="text-[11px] font-black uppercase">Под-нумерирање</span>
              </button>
+             <button onClick={randomizeQuestions} className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-100 bg-slate-50 text-slate-600 hover:bg-white transition">
+                <Shuffle size={14} />
+                <span className="text-[11px] font-black uppercase">Измешај задачи</span>
+             </button>
           </div>
 
           <div id="test-paper" className={`w-[210mm] min-h-[297mm] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-[20mm] relative flex flex-col transition-all duration-500 ${showTutorial && tutorialStep === 4 ? 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]' : ''}`}>
@@ -430,7 +451,27 @@ const App = () => {
              </header>
 
              <div className="relative z-10 space-y-20 flex-grow">
-               {questions.map((q, idx) => {
+               {view === 'answerSheet' ? (
+                 <div className="grid grid-cols-2 gap-10">
+                   {questions.map((q, idx) => (
+                     <div key={q.id} className="flex items-center gap-4 p-4 border-b border-slate-100">
+                       <span className="font-black text-slate-900 w-6">{idx + 1}.</span>
+                       <div className="flex gap-2">
+                         {q.type === 'multiple' || q.type === 'checklist' || q.type === 'true-false' ? (
+                           (q.type === 'true-false' ? ['Т', 'Н'] : q.options).map((_, oIdx) => (
+                             <div key={oIdx} className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] font-black text-slate-300">
+                               {q.type === 'true-false' ? (oIdx === 0 ? 'Т' : 'Н') : String.fromCharCode(65 + oIdx)}
+                             </div>
+                           ))
+                         ) : (
+                           <div className="border-b-2 border-slate-200 w-40 h-6" />
+                         )}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 questions.map((q, idx) => {
                  let displayNum = (idx + 1).toString();
                  if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
                  const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
@@ -447,6 +488,9 @@ const App = () => {
                           <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
                           <button onClick={() => saveToBank(q)} className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition shadow-sm" title="Зачувај"><Save size={16} /></button>
                           <button onClick={() => setShowHelp(showHelp === q.id ? null : q.id)} className={`p-2.5 rounded-xl transition shadow-sm ${showHelp === q.id ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white'}`} title="Помош"><AlertCircle size={16} /></button>
+                          {(q.type === 'multiple' || q.type === 'checklist') && (
+                            <button onClick={() => randomizeAnswers(q.id)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition shadow-sm" title="Измешај одговори"><Shuffle size={16} /></button>
+                          )}
                           <div className="bg-white p-2 rounded-xl border flex flex-col items-center shadow-sm">
                              <span className="text-[8px] font-black text-slate-400 uppercase">Бод</span>
                              <input type="number" value={q.points} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, points: e.target.value} : qu))} className="w-8 text-xs font-black text-center outline-none bg-slate-50 rounded" />
