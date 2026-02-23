@@ -168,7 +168,7 @@ const App = () => {
 
   const addQuestion = (type) => {
     const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1 };
-    if (type === 'multiple') { baseQ.options = ['', '', '']; baseQ.correct = 0; }
+    if (type === 'multiple' || type === 'checklist') { baseQ.options = ['', '', '']; baseQ.correct = 0; baseQ.corrects = []; }
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
     else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3 }; }
     else if (type === 'selection') { baseQ.text = "Пример за {избор|погрешно}."; }
@@ -401,19 +401,37 @@ const App = () => {
                        </div>
                     </div>
                     <div className="ml-16 font-sans">
-                       {q.type === 'multiple' && (
+                       {(q.type === 'multiple' || q.type === 'checklist') && (
                           <div className={`grid gap-4 grid-cols-${q.columns || 1}`}>
                              {q.options.map((opt, oIdx) => (
-                                <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
-                                   <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : 'rounded-full'} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
+                                <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
+                                   <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : (q.type === 'checklist' ? 'rounded-lg' : 'rounded-full')} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
                                       <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
                                    </div>
                                    {view === 'editor' ? <input value={opt} onChange={e => {
                                       const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
                                    }} className="bg-transparent border-b w-full outline-none text-base font-bold" /> : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
-                                   {view === 'editor' && <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu))} className={`p-1 transition ${q.correct === oIdx ? 'text-emerald-500' : 'text-slate-200'}`}><CheckCircle2 size={18} /></button>}
+                                   {view === 'editor' && (
+                                     <button onClick={() => {
+                                       if (q.type === 'multiple') {
+                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu));
+                                       } else {
+                                         const cur = q.corrects || [];
+                                         const next = cur.includes(oIdx) ? cur.filter(c => c !== oIdx) : [...cur, oIdx];
+                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, corrects: next} : qu));
+                                       }
+                                     }} className={`p-1 transition ${(q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'text-emerald-500' : 'text-slate-200'}`}>
+                                       {q.type === 'checklist' ? <CheckSquare size={18} /> : <CheckCircle2 size={18} />}
+                                     </button>
+                                   )}
                                 </div>
                              ))}
+                             {view === 'editor' && (
+                               <button onClick={() => {
+                                 const n = [...q.options, ''];
+                                 setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                               }} className="text-[10px] font-black uppercase text-indigo-600 hover:underline flex items-center gap-1"><Plus size={12} /> Додај опција</button>
+                             )}
                           </div>
                        )}
                        {q.type === 'multi-match' && (
