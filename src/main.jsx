@@ -169,8 +169,9 @@ const App = () => {
   const addQuestion = (type) => {
     const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1 };
     if (type === 'multiple') { baseQ.options = ['', '', '']; baseQ.correct = 0; }
-    else if (type === 'matching') { baseQ.pairs = [{l:'', r:''}, {l:'', r:''}]; }
+    else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
     else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3 }; }
+    else if (type === 'selection') { baseQ.text = "Пример за {избор|погрешно}."; }
     setQuestions([...questions, baseQ]);
   };
 
@@ -383,7 +384,15 @@ const App = () => {
                        <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
                        <div className="flex-1">
                           {view === 'editor' ? (
-                             <textarea rows="1" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder="Внесете задача..." />
+                             <div className="space-y-4">
+                               <textarea rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
+                               {q.type === 'selection' && (
+                                 <div className="flex gap-2 p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                                   <HelpCircle size={14} className="text-indigo-400 mt-0.5" />
+                                   <p className="text-[10px] font-medium text-indigo-600 leading-normal">Користете <code className="bg-white px-1 rounded border border-indigo-200">{"{опција1|опција2}"}</code> за да креирате паѓачко мени во текстот. Првата опција е секогаш точната.</p>
+                                 </div>
+                               )}
+                             </div>
                           ) : (
                             <div className={`text-lg font-bold text-slate-800 leading-relaxed pr-10 ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`}>
                                <RenderContent text={q.text} view={view} />
@@ -405,6 +414,51 @@ const App = () => {
                                    {view === 'editor' && <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu))} className={`p-1 transition ${q.correct === oIdx ? 'text-emerald-500' : 'text-slate-200'}`}><CheckCircle2 size={18} /></button>}
                                 </div>
                              ))}
+                          </div>
+                       )}
+                       {q.type === 'multi-match' && (
+                          <div className="space-y-4">
+                             {view === 'editor' ? (
+                               <div className="space-y-3">
+                                 {(q.matches || [{s:'', a:''}]).map((m, mIdx) => (
+                                   <div key={mIdx} className="flex gap-4 items-center">
+                                      <input placeholder="Изјава..." value={m.s} onChange={e => {
+                                        const nm = [...(q.matches || [])]; nm[mIdx].s = e.target.value;
+                                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                                      }} className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100 font-bold" />
+                                      <ArrowRight size={16} className="text-slate-300" />
+                                      <input placeholder="Одговор..." value={m.a} onChange={e => {
+                                        const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
+                                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                                      }} className="w-40 bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
+                                   </div>
+                                 ))}
+                                 <button onClick={() => {
+                                   const nm = [...(q.matches || [{s:'', a:''}]), {s:'', a:''}];
+                                   setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                                 }} className="text-[10px] font-black uppercase text-indigo-600 hover:underline flex items-center gap-1"><Plus size={12} /> Додај ред</button>
+                               </div>
+                             ) : (
+                               <div className="grid grid-cols-2 gap-10">
+                                  <div className="space-y-6">
+                                     {(q.matches || []).map((m, mIdx) => (
+                                       <div key={mIdx} className="flex gap-4 items-center border-b border-slate-100 pb-2">
+                                          <span className="text-xs font-black text-slate-400">{mIdx + 1}.</span>
+                                          <RenderContent text={m.s} view={view} className="text-base font-bold" />
+                                       </div>
+                                     ))}
+                                  </div>
+                                  <div className="space-y-6">
+                                     {/* Shuffle answers for the test view */}
+                                     {(q.matches || []).map((m, mIdx) => (
+                                       <div key={mIdx} className="flex gap-4 items-center border-b border-slate-100 pb-2">
+                                          <span className="w-8 h-8 rounded-lg border-2 border-slate-800 flex items-center justify-center text-xs font-black">{String.fromCharCode(65 + mIdx)}</span>
+                                          {view === 'answerKey' ? <span className="text-base font-black text-emerald-600 underline">{m.a}</span> : <div className="h-6 w-32 border-b-2 border-slate-200" />}
+                                       </div>
+                                     ))}
+                                  </div>
+                               </div>
+                             )}
                           </div>
                        )}
                        {(q.type === 'essay' || q.type === 'short-answer') && (
