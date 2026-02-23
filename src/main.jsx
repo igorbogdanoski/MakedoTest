@@ -297,6 +297,46 @@ const App = () => {
           ))}
         </div>
         <div id="action-buttons" className={`flex items-center gap-3 transition-all duration-500 ${showTutorial && tutorialStep === 5 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1' : ''}`}>
+          <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden">
+             <button onClick={() => {
+                const qti = `<?xml version="1.0" encoding="UTF-8"?>
+<assessmentTest xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" title="${testInfo.subject}">
+  ${questions.map(q => `
+  <assessmentItem identifier="${q.id}" title="${q.type}">
+    <itemBody><p>${q.text}</p></itemBody>
+  </assessmentItem>`).join('')}
+</assessmentTest>`;
+                const blob = new Blob([qti], {type: 'text/xml'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test-qti.xml';
+                a.click();
+             }} className="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-indigo-600 flex items-center gap-1"><Share2 size={12} /> Export QTI</button>
+             <label className="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer">
+                <Cloud size={12} /> Import QTI
+                <input type="file" className="hidden" accept=".xml" onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
+                    const items = xmlDoc.getElementsByTagName("assessmentItem");
+                    const newQs = Array.from(items).map((item, i) => ({
+                      id: Date.now() + i,
+                      type: 'multiple',
+                      text: item.getElementsByTagName("p")[0]?.textContent || "Увезена задача",
+                      points: 5,
+                      options: ['', '', ''],
+                      correct: 0
+                    }));
+                    if (newQs.length > 0) setQuestions([...questions, ...newQs]);
+                  };
+                  reader.readAsText(file);
+                }} />
+             </label>
+          </div>
           <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> Печати</button>
           <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? 'Преглед' : 'Поставки'}</button>
         </div>
@@ -421,7 +461,18 @@ const App = () => {
                       </div>
                     )}
                     <div className="flex gap-6 mb-6 items-start font-sans">
-                       <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
+                       <div className="flex flex-col items-center gap-1">
+                          {view === 'editor' && testInfo.subNumbering ? (
+                            <input 
+                              value={q.subNum || (idx + 1)} 
+                              onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, subNum: e.target.value} : qu))}
+                              className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xs font-black text-center outline-none focus:ring-2 focus:ring-indigo-500 shadow-lg"
+                            />
+                          ) : (
+                            <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
+                          )}
+                          {view === 'editor' && testInfo.subNumbering && <span className="text-[8px] font-black uppercase text-slate-400">Број</span>}
+                       </div>
                        <div className="flex-1">
                           {view === 'editor' ? (
                              <div className="space-y-4">
