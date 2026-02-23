@@ -95,6 +95,25 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [duplicateAlert, setDuplicateAlert] = useState(null);
+  const [showHelp, setShowHelp] = useState(null); // ID of question showing help
+
+  const helpContent = {
+    'multiple': 'Класичен формат со еден точен одговор. Кликнете на кругот за да го означите точниот.',
+    'true-false': 'Брз формат за проверка на факти. Можете да менувате помеѓу хоризонтален и вертикален приказ.',
+    'fill-blanks': 'Користете [ ] во текстот за да креирате празно место за пишување.',
+    'selection': 'Користете {опција1|опција2} за да креирате паѓачко мени. Првата опција е секогаш точната.',
+    'multi-match': 'Поврзете повеќе изјави со соодветни одговори. Одговорите може да се повторуваат.',
+    'short-answer': 'Задачи кои бараат неколку зборови или една реченица како одговор.',
+    'essay': 'За подолги одговори. Бројот на линии може да се прилагоди во поставките.',
+    'matching': 'Поврзување на два поими во парови.',
+    'ordering': 'Учениците треба да го внесат правилниот редослед (1, 2, 3...) пред секој поим.',
+    'list': 'Набројување на поими или факти.',
+    'table': 'Кликнете на келиите за да ги претворите во полиња за внесување на одговор.',
+    'multi-part': 'Комплексни задачи поделени на под-делови (а, б, в) со посебни бодови.',
+    'diagram': 'Поставете слика на која учениците треба да означат или нацртаат делови.',
+    'statements': 'Листа на изјави каде за секоја треба да се означи Точно или Неточно.',
+    'checklist': 'Формат каде ученикот треба да ги препознае сите точни одговори (повеќе од еден).'
+  };
 
   const [testInfo, setTestInfo] = useState({
     schoolType: "ООУ", school: "„Македонија“", subject: "Природни Науки",
@@ -169,8 +188,9 @@ const App = () => {
   const addQuestion = (type) => {
     const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1 };
     if (type === 'multiple' || type === 'checklist') { baseQ.options = ['', '', '']; baseQ.correct = 0; baseQ.corrects = []; }
+    else if (type === 'true-false') { baseQ.correct = 0; baseQ.layout = 'horizontal'; }
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
-    else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3 }; }
+    else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3, data: {} }; }
     else if (type === 'selection') { baseQ.text = "Пример за {избор|погрешно}."; }
     setQuestions([...questions, baseQ]);
   };
@@ -374,11 +394,19 @@ const App = () => {
                        <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
                           <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
                           <button onClick={() => saveToBank(q)} className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition shadow-sm" title="Зачувај"><Save size={16} /></button>
+                          <button onClick={() => setShowHelp(showHelp === q.id ? null : q.id)} className={`p-2.5 rounded-xl transition shadow-sm ${showHelp === q.id ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white'}`} title="Помош"><AlertCircle size={16} /></button>
                           <div className="bg-white p-2 rounded-xl border flex flex-col items-center shadow-sm">
                              <span className="text-[8px] font-black text-slate-400 uppercase">Бод</span>
                              <input type="number" value={q.points} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, points: e.target.value} : qu))} className="w-8 text-xs font-black text-center outline-none bg-slate-50 rounded" />
                           </div>
                        </div>
+                    )}
+                    {view === 'editor' && showHelp === q.id && (
+                      <div className="absolute left-0 -top-12 w-full bg-amber-50 border border-amber-200 p-3 rounded-2xl flex gap-3 items-center animate-in slide-in-from-bottom-2 duration-300 z-30">
+                        <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
+                        <p className="text-xs font-bold text-amber-800">{helpContent[q.type] || 'Нема достапни информации за овој тип.'}</p>
+                        <button onClick={() => setShowHelp(null)} className="ml-auto text-amber-400 hover:text-amber-600"><X size={14} /></button>
+                      </div>
                     )}
                     <div className="flex gap-6 mb-6 items-start font-sans">
                        <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
@@ -434,6 +462,28 @@ const App = () => {
                              )}
                           </div>
                        )}
+                       {q.type === 'true-false' && (
+                          <div className={`flex ${q.layout === 'vertical' ? 'flex-col w-40' : 'flex-row w-full'} gap-4`}>
+                             {['Точно', 'Неточно'].map((opt, oIdx) => (
+                                <div key={oIdx} className={`flex-1 flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
+                                   <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${view === 'answerKey' && q.correct === oIdx ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white'}`}>
+                                      {oIdx === 0 ? 'Т' : 'Н'}
+                                   </div>
+                                   <span className="text-sm font-bold text-slate-700">{opt}</span>
+                                   {view === 'editor' && (
+                                     <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu))} className={`p-1 ml-auto transition ${q.correct === oIdx ? 'text-emerald-500' : 'text-slate-200'}`}>
+                                       <CheckCircle2 size={18} />
+                                     </button>
+                                   )}
+                                </div>
+                             ))}
+                             {view === 'editor' && (
+                               <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, layout: q.layout === 'vertical' ? 'horizontal' : 'vertical'} : qu))} className="p-2 bg-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 transition" title="Промени распоред">
+                                  <MoveVertical size={16} className={q.layout === 'vertical' ? 'rotate-90' : ''} />
+                               </button>
+                             )}
+                          </div>
+                       )}
                        {q.type === 'multi-match' && (
                           <div className="space-y-4">
                              {view === 'editor' ? (
@@ -447,7 +497,7 @@ const App = () => {
                                       <ArrowRight size={16} className="text-slate-300" />
                                       <input placeholder="Одговор..." value={m.a} onChange={e => {
                                         const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
-                                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                                        setQuestions(questions.map(qu => qu.id === qu.id ? {...qu, matches: nm} : qu));
                                       }} className="w-40 bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
                                    </div>
                                  ))}
@@ -477,6 +527,71 @@ const App = () => {
                                   </div>
                                </div>
                              )}
+                          </div>
+                       )}
+                       {q.type === 'table' && (
+                          <div className="space-y-4">
+                             {view === 'editor' && (
+                               <div className="flex gap-4 mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                  <div className="flex flex-col gap-1">
+                                     <span className="text-[8px] font-black uppercase text-slate-400">Редови</span>
+                                     <input type="number" min="1" max="10" value={q.tableData?.rows || 3} onChange={e => {
+                                       const rows = parseInt(e.target.value);
+                                       const data = q.tableData?.data || {};
+                                       setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, rows, data}} : qu));
+                                     }} className="w-12 p-2 rounded-lg border text-xs font-bold" />
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                     <span className="text-[8px] font-black uppercase text-slate-400">Колони</span>
+                                     <input type="number" min="1" max="6" value={q.tableData?.cols || 3} onChange={e => {
+                                       const cols = parseInt(e.target.value);
+                                       const data = q.tableData?.data || {};
+                                       setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, cols, data}} : qu));
+                                     }} className="w-12 p-2 rounded-lg border text-xs font-bold" />
+                                  </div>
+                                  <div className="flex-1 flex items-center justify-end text-[10px] font-bold text-slate-400 italic">Кликни на келија за да ја означиш како одговор</div>
+                               </div>
+                             )}
+                             <div className="overflow-x-auto rounded-xl border-2 border-slate-900 shadow-[4px_4px_0_0_#0f172a]">
+                                <table className="w-full border-collapse">
+                                   <tbody>
+                                      {[...Array(q.tableData?.rows || 3)].map((_, r) => (
+                                        <tr key={r}>
+                                           {[...Array(q.tableData?.cols || 3)].map((_, c) => {
+                                             const cellId = `${r}-${c}`;
+                                             const cell = q.tableData?.data?.[cellId] || { val: '', isAns: false };
+                                             return (
+                                               <td key={c} className="border border-slate-200 p-0 min-w-[100px]">
+                                                  {view === 'editor' ? (
+                                                    <div className={`relative group/cell ${cell.isAns ? 'bg-emerald-50' : 'bg-white'}`}>
+                                                       <input value={cell.val} onChange={e => {
+                                                         const data = {...(q.tableData?.data || {})};
+                                                         data[cellId] = {...cell, val: e.target.value};
+                                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
+                                                       }} className="w-full p-4 text-sm font-bold bg-transparent outline-none focus:bg-indigo-50/30" />
+                                                       <button onClick={() => {
+                                                         const data = {...(q.tableData?.data || {})};
+                                                         data[cellId] = {...cell, isAns: !cell.isAns};
+                                                         setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
+                                                       }} className={`absolute top-1 right-1 p-1 rounded transition ${cell.isAns ? 'text-emerald-500' : 'text-slate-200 group-hover/cell:text-slate-400'}`}>
+                                                          <Check size={12} strokeWidth={3} />
+                                                       </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="p-4 min-h-[50px] flex items-center justify-center text-sm font-bold">
+                                                       {cell.isAns ? (
+                                                         view === 'answerKey' ? <span className="text-emerald-600 underline">{cell.val}</span> : <div className="border-b-2 border-slate-900 w-full h-4 mx-2" />
+                                                       ) : <RenderContent text={cell.val} view={view} />}
+                                                    </div>
+                                                  )}
+                                               </td>
+                                             );
+                                           })}
+                                        </tr>
+                                      ))}
+                                   </tbody>
+                                </table>
+                             </div>
                           </div>
                        )}
                        {(q.type === 'essay' || q.type === 'short-answer') && (
