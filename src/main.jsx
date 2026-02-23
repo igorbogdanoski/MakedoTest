@@ -130,6 +130,11 @@ const App = () => {
 
   const totalPoints = useMemo(() => questions.reduce((acc, q) => acc + Number(q.points || 0), 0), [questions]);
 
+  const duplicates = useMemo(() => {
+    const texts = questions.map(q => q.text.trim().toLowerCase()).filter(t => t.length > 5);
+    return texts.filter((item, index) => texts.indexOf(item) !== index);
+  }, [questions]);
+
   const questionTypes = [
     { id: 'multiple', label: 'Понудени одговори', icon: <CheckSquare size={16} />, cat: 'базични' },
     { id: 'true-false', label: 'Точно/Неточно', icon: <HelpCircle size={16} />, cat: 'базични' },
@@ -388,8 +393,15 @@ const App = () => {
                {questions.map((q, idx) => {
                  let displayNum = (idx + 1).toString();
                  if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
+                 const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
+
                  return (
-                 <div key={q.id} className="relative group">
+                 <div key={q.id} className={`relative group p-4 rounded-3xl transition-all ${isDuplicate ? 'bg-red-50/50 ring-2 ring-red-100 mb-10' : ''}`}>
+                    {view === 'editor' && isDuplicate && (
+                      <div className="absolute -top-4 right-0 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-2 shadow-lg animate-bounce">
+                        <AlertCircle size={12} /> Постои дупликат задача!
+                      </div>
+                    )}
                     {view === 'editor' && (
                        <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
                           <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
