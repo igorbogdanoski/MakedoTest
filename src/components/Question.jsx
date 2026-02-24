@@ -1,15 +1,38 @@
 import React from 'react';
-import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X } from 'lucide-react';
+import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown } from 'lucide-react';
 import RenderContent from './RenderContent';
 
 const Question = ({ 
   q, idx, view, testInfo, questions, setQuestions, 
   saveToBank, showHelp, setShowHelp, helpContent, 
-  randomizeAnswers, duplicates 
+  randomizeAnswers, duplicates, moveQuestion 
 }) => {
   let displayNum = (idx + 1).toString();
   if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
   const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
+
+  if (q.type === 'section') {
+    return (
+      <div className={`relative group py-12 border-b-4 border-slate-900 mb-10 ${testInfo.layout === 'double' ? 'col-span-2' : ''}`}>
+        {view === 'editor' && (
+          <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
+            <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
+            <button onClick={() => moveQuestion(idx, -1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronUp size={16} /></button>
+            <button onClick={() => moveQuestion(idx, 1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronDown size={16} /></button>
+          </div>
+        )}
+        {view === 'editor' ? (
+          <input 
+            value={q.text} 
+            onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value.toUpperCase()} : qu))}
+            className="w-full text-4xl font-black uppercase tracking-[0.2em] bg-slate-50 p-4 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/20 transition"
+          />
+        ) : (
+          <h2 className="text-4xl font-black uppercase tracking-[0.3em] text-slate-900">{q.text}</h2>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div key={q.id} className={`relative group p-4 rounded-3xl transition-all ${isDuplicate ? 'bg-red-50/50 ring-2 ring-red-100 mb-10' : ''}`}>
@@ -21,8 +44,28 @@ const Question = ({
       {view === 'editor' && (
         <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
           <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
+          <button onClick={() => moveQuestion(idx, -1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronUp size={16} /></button>
+          <button onClick={() => moveQuestion(idx, 1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronDown size={16} /></button>
           <button onClick={() => saveToBank(q)} className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition shadow-sm" title="Зачувај"><Save size={16} /></button>
           <button onClick={() => setShowHelp(showHelp === q.id ? null : q.id)} className={`p-2.5 rounded-xl transition shadow-sm ${showHelp === q.id ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white'}`} title="Помош"><AlertCircle size={16} /></button>
+          <button 
+            onClick={() => {
+              const diffs = ['easy', 'medium', 'hard'];
+              const next = diffs[(diffs.indexOf(q.difficulty || 'medium') + 1) % 3];
+              setQuestions(questions.map(qu => qu.id === q.id ? {...qu, difficulty: next} : qu));
+            }} 
+            className={`p-2.5 rounded-xl transition shadow-sm ${
+              q.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 
+              q.difficulty === 'hard' ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white' : 
+              'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white'
+            }`} 
+            title="Тежина"
+          >
+            <Flame size={16} fill={q.difficulty === 'hard' ? 'currentColor' : 'none'} />
+          </button>
+          {testInfo.layout === 'double' && (
+            <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, fullWidth: !qu.fullWidth} : qu))} className={`p-2.5 rounded-xl transition shadow-sm ${q.fullWidth ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} title="Цела ширина"><MoveVertical size={16} className="rotate-90" /></button>
+          )}
           {(q.type === 'multiple' || q.type === 'checklist') && (
             <button onClick={() => randomizeAnswers(q.id)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition shadow-sm" title="Измешај одговори"><Shuffle size={16} /></button>
           )}
@@ -33,10 +76,41 @@ const Question = ({
         </div>
       )}
       {view === 'editor' && showHelp === q.id && (
-        <div className="absolute left-0 -top-12 w-full bg-amber-50 border border-amber-200 p-3 rounded-2xl flex gap-3 items-center animate-in slide-in-from-bottom-2 duration-300 z-30">
-          <AlertCircle size={18} className="text-amber-500 flex-shrink-0" />
-          <p className="text-xs font-bold text-amber-800">{helpContent[q.type] || 'Нема достапни информации за овој тип.'}</p>
-          <button onClick={() => setShowHelp(null)} className="ml-auto text-amber-400 hover:text-amber-600"><X size={14} /></button>
+        <div className="absolute left-0 -top-40 w-full bg-white border border-amber-200 p-6 rounded-[2rem] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 z-50 ring-4 ring-amber-50">
+          <div className="flex items-start gap-4">
+            <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
+              <AlertCircle size={24} />
+            </div>
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black uppercase tracking-tight text-slate-900">Помош за наставникот</h4>
+                <button onClick={() => setShowHelp(null)} className="text-slate-300 hover:text-slate-900 transition"><X size={18} /></button>
+              </div>
+              {helpContent[q.type] ? (
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-800 leading-relaxed">{helpContent[q.type].desc}</p>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <span className="text-[10px] font-black uppercase text-indigo-500 block mb-1">Кога да се користи:</span>
+                      <p className="text-[11px] font-medium text-slate-600">{helpContent[q.type].use}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                      <span className="text-[10px] font-black uppercase text-emerald-600 block mb-1">Пример:</span>
+                      <p className="text-[11px] font-bold text-emerald-800 italic">"{helpContent[q.type].example}"</p>
+                    </div>
+                    <div className="flex gap-2 items-center text-amber-600">
+                      <Sparkles size={12} />
+                      <p className="text-[10px] font-black uppercase tracking-tight">Совет: {helpContent[q.type].tip}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs font-bold text-slate-400 italic">Нема достапни детални информации за овој формат.</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
       <div className="flex gap-6 mb-6 items-start font-sans">
@@ -50,12 +124,41 @@ const Question = ({
           ) : (
             <span className="bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 shadow-lg">{displayNum}</span>
           )}
+          {view !== 'editor' && q.difficulty && (
+            <div className={`mt-2 flex gap-0.5 ${
+              q.difficulty === 'easy' ? 'text-emerald-400' : 
+              q.difficulty === 'hard' ? 'text-red-400' : 'text-amber-400'
+            }`}>
+              <Flame size={10} fill="currentColor" />
+              {q.difficulty !== 'easy' && <Flame size={10} fill="currentColor" />}
+              {q.difficulty === 'hard' && <Flame size={10} fill="currentColor" />}
+            </div>
+          )}
           {view === 'editor' && testInfo.subNumbering && <span className="text-[8px] font-black uppercase text-slate-400">Број</span>}
         </div>
-        <div className="flex-1">
+        <div className="flex-1 relative">
+          {view !== 'editor' && q.qrLink && (
+            <div className="absolute -top-12 right-0 p-1.5 bg-white border-2 border-slate-900 rounded-xl shadow-sm z-10 flex flex-col items-center">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(q.qrLink)}`} 
+                alt="QR Code" 
+                className="w-12 h-12"
+              />
+              <p className="text-[6px] font-black uppercase mt-1 text-slate-900">Ресурс</p>
+            </div>
+          )}
           {view === 'editor' ? (
             <div className="space-y-4">
               <textarea rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
+              <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="bg-slate-50 p-2 rounded-xl text-slate-400"><Globe size={14} /></div>
+                <input 
+                  placeholder="Линк до ресурс (видео, текст...) за QR код..." 
+                  value={q.qrLink || ''} 
+                  onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, qrLink: e.target.value} : qu))}
+                  className="flex-1 bg-transparent text-xs font-bold outline-none text-slate-600"
+                />
+              </div>
               {q.type === 'selection' && (
                 <div className="flex gap-2 p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100">
                   <AlertCircle size={14} className="text-indigo-400 mt-0.5" />

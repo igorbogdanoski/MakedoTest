@@ -8,7 +8,7 @@ import {
   ListOrdered, HelpCircle, Minus, List as ListIcon, Square, Table as TableIcon, 
   Grid3X3, Layers, CircleDot, CheckCircle2, Image as ImageIcon, FileText, 
   KeyRound, School, Shuffle, Columns, Info, Beaker, Sigma, MoveVertical,
-  ChevronDown, BookOpen, Languages, Globe, History, Zap, Sparkles, ArrowRight,
+  ChevronDown, BookOpen, Languages, Globe, History, Zap, Sparkles, ArrowRight, Clock, Trophy,
   Cloud, Share2, Search, ExternalLink, X, Play, MousePointer2, AlignJustify, 
   Copy, AlertCircle, Check, Hash, RotateCcw, Target, Library, Save
 } from 'lucide-react';
@@ -44,37 +44,119 @@ const App = () => {
   const [showHelp, setShowHelp] = useState(null);
 
   const helpContent = {
-    'multiple': 'Класичен формат со еден точен одговор. Кликнете на кругот за да го означите точниот.',
-    'true-false': 'Брз формат за проверка на факти. Можете да менувате помеѓу хоризонтален и вертикален приказ.',
-    'fill-blanks': 'Користете [ ] во текстот за да креирате празно место за пишување.',
-    'selection': 'Користете {опција1|опција2} за да креирате паѓачко мени. Првата опција е секогаш точната.',
-    'multi-match': 'Поврзете повеќе изјави со соодветни одговори. Одговорите може да се повторуваат.',
-    'short-answer': 'Задачи кои бараат неколку зборови или една реченица како одговор.',
-    'essay': 'За подолги одговори. Бројот на линии може да се прилагоди во поставките.',
-    'matching': 'Поврзување на два поими во парови.',
-    'ordering': 'Учениците треба да го внесат правилниот редослед (1, 2, 3...) перед секој поим.',
-    'list': 'Набројување на поими или факти.',
-    'table': 'Кликнете на келиите за да ги претворите во полиња за внесување на одговор.',
-    'multi-part': 'Комплексни задачи поделени на под-делови (а, б, в) со посебни бодови.',
-    'diagram': 'Поставете слика на која учениците треба да означат или нацртаат делови.',
-    'statements': 'Листа на изјави каде за секоја треба да се означи Точно или Неточно.',
-    'checklist': 'Формат каде ученикот треба да ги препознае сите точни одговори (повеќе од еден).'
+    'multiple': {
+      desc: 'Најчест формат за брза проверка на знаењето со еден точен одговор.',
+      use: 'Идеално за дефиниции, години, имиња или математички резултати.',
+      example: 'Која планета е позната како „Црвената планета“? (Марс, Венера, Јупитер)',
+      tip: 'Кликнете на кругот до одговорот за да го означите како точен за „Клучот“.'
+    },
+    'true-false': {
+      desc: 'Едноставен избор помеѓу две спротивставени тврдења.',
+      use: 'За проверка на фактичка точност или препознавање на заблуди.',
+      example: 'Сонцето е планета. (Точно / Неточно)',
+      tip: 'Користете го копчето со стрелки во едиторот за да го смените распоредот од хоризонтален во вертикален.'
+    },
+    'fill-blanks': {
+      desc: 'Текст каде ученикот треба сам да го допише зборот што недостасува.',
+      use: 'За проверка на меморија на клучни поими во контекст на реченица.',
+      example: 'Процесот во кој растенијата создаваат храна се нарекува [фотосинтеза].',
+      tip: 'Зборот што го сакате како празно место ставете го во средни загради [ ].'
+    },
+    'selection': {
+      desc: 'Инлајн верзија на повеќекратен избор директно во реченицата.',
+      use: 'За граматички вежби (избор на времиња) или логички избори во текст.',
+      example: 'Водата врие на {100|0|50} степени Целзиусови.',
+      tip: 'Користете {точен|погрешен|погрешен}. Првиот збор е секогаш точниот одговор.'
+    },
+    'multi-match': {
+      desc: 'Напредно поврзување каде една вредност од десно може да одговара на повеќе од лево.',
+      use: 'За класификација на поими во категории.',
+      example: 'Лав -> Цицач, Орел -> Птица, Делфин -> Цицач.',
+      tip: 'Додајте редови и внесете го парот. Системот автоматски ќе ги измеша за ученикот.'
+    },
+    'table': {
+      desc: 'Табеларен приказ за организирани податоци.',
+      use: 'За физички/хемиски мерења, хронологија или споредби.',
+      example: 'Табела со елементи и нивните атомски броеви.',
+      tip: 'Кликнете на иконата со штиклирање во аголот на секоја келија за да ја претворите во поле за одговор.'
+    },
+    'checklist': {
+      desc: 'Задача со повеќе точни одговори од понудените.',
+      use: 'За комплексни прашања каде треба да се изберат сите карактеристики на некој поим.',
+      example: 'Кои од следниве се цицачи? (Кит, Куче, Жаба, Човек)',
+      tip: 'Можете да означите неограничен број точни одговори со кликање на квадратчињата.'
+    },
+    'ordering': {
+      desc: 'Подредување на поими по хронолошки или логички редослед.',
+      use: 'За историски настани, чекори во експеримент или фази на развој.',
+      example: 'Подреди ги фазите на развој на пеперутка: (Јајце, Гасеница, Кукла, Пеперутка)',
+      tip: 'Внесете ги поимите во правилен редослед, а системот ќе ги прикаже со празни места за бројки.'
+    },
+    'short-answer': {
+      desc: 'Задачи кои бараат неколку зборови или една реченица како одговор.',
+      use: 'За дефиниции или кратки објаснувања.',
+      example: 'Што е фотосинтеза?',
+      tip: 'Можете да додадете линии за пишување во поставките на задачата.'
+    },
+    'essay': {
+      desc: 'За подолги одговори и критичко размислување.',
+      use: 'За анализи, раскази или есеи.',
+      example: 'Опиши го значењето на Илинденското востание.',
+      tip: 'Прилагодете ја висината на просторот за пишување за да одговара на очекуваната должина.'
+    },
+    'matching': {
+      desc: 'Поврзување на два поими во парови 1-на-1.',
+      use: 'За термини и дефиниции, држави и главни градови.',
+      example: 'Македонија - Скопје, Германија - Берлин.',
+      tip: 'Системот автоматски ќе ги измеша левата и десната колона.'
+    },
+    'multi-part': {
+      desc: 'Комплексна задача поделена на неколку под-прашања (а, б, в).',
+      use: 'За математички проблеми со повеќе чекори или анализа на текст.',
+      example: 'Задача 1: а) Пресметај го х; б) Нацртај го графикот.',
+      tip: 'Можете да доделите посебни бодови за секој дел.'
+    },
+    'diagram': {
+      desc: 'Визуелна задача каде се бара означување на слика.',
+      use: 'За анатомија, географија (карти) или технички шеми.',
+      example: 'Означи ги деловите на цветот на дадената слика.',
+      tip: 'Поставете ја сликата во едиторот и користете го просторот под неа за прашања.'
+    }
   };
 
   const [testInfo, setTestInfo] = useState({
     schoolType: "ООУ", school: "„Македонија“", subject: "Природни Науки",
     teacher: "Наставник", title: "Тест за знаење", date: new Date().toLocaleDateString('mk-MK'),
-    grade: "VII", alignment: "left", zipGrade: false, watermark: "", subNumbering: false,
+    grade: "VII", alignment: "left", zipGrade: false, watermark: "", subNumbering: false, layout: 'single',
+    showScale: false
   });
 
   const [questions, setQuestions] = useState([
     {
       id: 1, type: 'multiple', text: 'Пресметај ја плоштината на круг со радиус $r = 5cm$ ако $\\pi \\approx 3.14$?',
-      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 3, points: 5, subNum: ""
+      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 3, points: 5, subNum: "", difficulty: 'medium'
     }
   ]);
 
   const totalPoints = useMemo(() => questions.reduce((acc, q) => acc + Number(q.points || 0), 0), [questions]);
+
+  const estimatedTime = useMemo(() => {
+    return questions.reduce((acc, q) => {
+      let mins = 2; 
+      if (q.difficulty === 'easy') mins = 1;
+      if (q.difficulty === 'hard') mins = 5;
+      if (['essay', 'multi-part'].includes(q.type)) mins += 5;
+      if (['table', 'diagram'].includes(q.type)) mins += 2;
+      return acc + mins;
+    }, 0);
+  }, [questions]);
+
+  const gradingScale = useMemo(() => ({
+    '5': Math.ceil(totalPoints * 0.9),
+    '4': Math.ceil(totalPoints * 0.75),
+    '3': Math.ceil(totalPoints * 0.6),
+    '2': Math.ceil(totalPoints * 0.45)
+  }), [totalPoints]);
 
   const duplicates = useMemo(() => {
     const texts = questions.map(q => q.text.trim().toLowerCase()).filter(t => t.length > 5);
@@ -94,6 +176,7 @@ const App = () => {
     { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа' },
     { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни' },
     { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни' },
+    { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни' },
     { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни' },
     { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични' },
     { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични' },
@@ -136,12 +219,13 @@ const App = () => {
   };
 
   const addQuestion = (type) => {
-    const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1 };
+    const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1, difficulty: 'medium' };
     if (type === 'multiple' || type === 'checklist') { baseQ.options = ['', '', '']; baseQ.correct = 0; baseQ.corrects = []; }
     else if (type === 'true-false') { baseQ.correct = 0; baseQ.layout = 'horizontal'; }
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
     else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3, data: {} }; }
     else if (type === 'selection') { baseQ.text = "Пример за {избор|погрешно}."; }
+    else if (type === 'section') { baseQ.points = 0; baseQ.fullWidth = true; baseQ.text = "НОВА СЕКЦИЈА"; }
     setQuestions([...questions, baseQ]);
   };
 
@@ -167,6 +251,14 @@ const App = () => {
       }
       return q;
     }));
+  };
+
+  const moveQuestion = (idx, dir) => {
+    const newQs = [...questions];
+    const target = idx + dir;
+    if (target < 0 || target >= questions.length) return;
+    [newQs[idx], newQs[target]] = [newQs[target], newQs[idx]];
+    setQuestions(newQs);
   };
 
   if (view === 'landing') return <LandingPage setView={setView} setShowTutorial={setShowTutorial} setTutorialStep(setTutorialStep) demoStep={demoStep} />;
@@ -276,6 +368,27 @@ const App = () => {
               </div>
             </div>
 
+            <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-100 space-y-6">
+              <div className="flex items-center gap-3">
+                 <div className="bg-white/20 p-2 rounded-xl"><Clock size={20} /></div>
+                 <div>
+                    <p className="text-[10px] font-black uppercase opacity-60">Проценето време</p>
+                    <p className="text-xl font-black">{estimatedTime} мин.</p>
+                 </div>
+              </div>
+              <div className="space-y-3">
+                 <div className="flex items-center gap-2 opacity-60"><Trophy size={14} /><span className="text-[10px] font-black uppercase">Скала на оценки</span></div>
+                 <div className="grid grid-cols-4 gap-2">
+                    {[5, 4, 3, 2].map(grade => (
+                      <div key={grade} className="bg-white/10 rounded-xl p-2 text-center border border-white/10">
+                         <p className="text-[10px] font-black opacity-60">{grade}</p>
+                         <p className="text-sm font-black">{gradingScale[grade]}</p>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            </div>
+
             <div id="bank-tab" className={`transition-all duration-500 ${showTutorial && tutorialStep === 1 ? 'ring-4 ring-indigo-500 bg-indigo-50 p-4 rounded-3xl' : ''}`}>
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><History size={12} /> Банка ({questionBank.length})</h3>
                <div className="space-y-3">
@@ -308,6 +421,14 @@ const App = () => {
              <button onClick={() => setTestInfo({...testInfo, subNumbering: !testInfo.subNumbering})} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.subNumbering ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}>
                 <ListOrdered size={14} />
                 <span className="text-[11px] font-black uppercase">Под-нумерирање</span>
+             </button>
+             <button onClick={() => setTestInfo({...testInfo, layout: testInfo.layout === 'single' ? 'double' : 'single'})} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.layout === 'double' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}>
+                <Columns size={14} />
+                <span className="text-[11px] font-black uppercase">{testInfo.layout === 'single' ? '2 Колони' : '1 Колона'}</span>
+             </button>
+             <button onClick={() => setTestInfo({...testInfo, showScale: !testInfo.showScale})} className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.showScale ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}>
+                <Trophy size={14} />
+                <span className="text-[11px] font-black uppercase">Прикажи Скала</span>
              </button>
              <button onClick={randomizeQuestions} className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-100 bg-slate-50 text-slate-600 hover:bg-white transition">
                 <Shuffle size={14} />
@@ -352,7 +473,7 @@ const App = () => {
                 )}
              </header>
 
-             <div className="relative z-10 space-y-20 flex-grow">
+             <div className={`relative z-10 flex-grow ${testInfo.layout === 'double' && view !== 'answerSheet' ? 'grid grid-cols-2 gap-x-12 gap-y-20' : 'space-y-20'}`}>
                {view === 'answerSheet' ? (
                  <div className="grid grid-cols-2 gap-10">
                    {questions.map((q, idx) => (
@@ -374,25 +495,40 @@ const App = () => {
                  </div>
                ) : (
                  questions.map((q, idx) => (
-                   <Question 
-                     key={q.id}
-                     q={q} 
-                     idx={idx} 
-                     view={view} 
-                     testInfo={testInfo} 
-                     questions={questions}
-                     setQuestions={setQuestions}
-                     saveToBank={saveToBank}
-                     showHelp={showHelp}
-                     setShowHelp={setShowHelp}
-                     helpContent={helpContent}
-                     randomizeAnswers={randomizeAnswers}
-                     duplicates={duplicates}
-                   />
+                   <div key={q.id} className={testInfo.layout === 'double' && q.fullWidth ? 'col-span-2' : ''}>
+                     <Question 
+                       q={q} 
+                       idx={idx} 
+                       view={view} 
+                       testInfo={testInfo} 
+                       questions={questions}
+                       setQuestions={setQuestions}
+                       saveToBank={saveToBank}
+                       showHelp={showHelp}
+                       setShowHelp={setShowHelp}
+                       helpContent={helpContent}
+                       randomizeAnswers={randomizeAnswers}
+                       duplicates={duplicates}
+                       moveQuestion={moveQuestion}
+                     />
+                   </div>
                  ))
                )}
              </div>
 
+             {testInfo.showScale && (
+                <div className="mt-20 p-8 border-4 border-slate-900 rounded-[2rem] w-fit relative z-10">
+                   <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-4 text-slate-400">Скала на оцени</h3>
+                   <div className="flex gap-6">
+                      {[5, 4, 3, 2].map(g => (
+                        <div key={g} className="flex flex-col items-center border-r-2 border-slate-100 pr-6 last:border-0">
+                           <span className="text-2xl font-black text-slate-900">{g}</span>
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{gradingScale[g]}+</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+             )}
              <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{testInfo.schoolType} {testInfo.school} • v6.0 Pro</p>
                 <div className="text-center w-80">

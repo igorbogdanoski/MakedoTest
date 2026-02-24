@@ -7,7 +7,10 @@ const LandingPage = ({ setView, setShowTutorial, setTutorialStep, demoStep }) =>
     <nav className="px-8 py-6 flex justify-between items-center max-w-7xl mx-auto relative z-10">
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
         <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-100"><Zap className="text-white" size={32} /></div>
-        <span className="text-2xl font-black tracking-tighter uppercase text-slate-900">МакедоТест</span>
+        <div className="flex flex-col">
+          <span className="text-2xl font-black tracking-tighter uppercase text-slate-900">МакедоТест</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Автор: Игор Богданоски</span>
+        </div>
       </div>
       <button onClick={() => setView('editor')} className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-xl hover:scale-105 transition">Едитор</button>
     </nav>
