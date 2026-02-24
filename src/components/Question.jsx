@@ -3,7 +3,7 @@ import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, Ar
 import RenderContent from './RenderContent';
 
 const STEMHelper = ({ onInsert }) => (
-  <div className="flex flex-wrap gap-4 p-4 bg-white rounded-[2rem] border-4 border-indigo-100 w-fit shadow-2xl shadow-indigo-100/50 ring-12 ring-indigo-50/30">
+  <div className="flex flex-wrap gap-2 p-3 bg-white rounded-2xl border-2 border-indigo-100 w-full shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
     {[
       { label: '√', cmd: '$\\sqrt{}$' },
       { label: 'x²', cmd: '$^2$' },
@@ -23,13 +23,13 @@ const STEMHelper = ({ onInsert }) => (
         key={tool.label}
         onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => { e.preventDefault(); onInsert(tool.cmd); }}
-        className="w-14 h-14 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xl font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-90 shadow-sm hover:shadow-lg hover:shadow-indigo-200 flex items-center justify-center"
+        className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-90 flex items-center justify-center"
       >
         {tool.label}
       </button>
     ))}
-    <div className="w-px bg-slate-200 mx-2" />
-    <div className="flex items-center gap-3 text-xs font-black text-indigo-400 uppercase px-4 bg-indigo-50/50 rounded-2xl border-2 border-indigo-100/50"><Sigma size={20} className="text-indigo-600" /> STEM TOOLBAR</div>
+    <div className="w-px bg-slate-100 mx-1" />
+    <div className="flex items-center gap-2 text-[9px] font-black text-indigo-400 uppercase px-3 bg-indigo-50/50 rounded-xl border border-indigo-100/50"><Sigma size={14} className="text-indigo-600" /> STEM</div>
   </div>
 );
 
@@ -220,20 +220,17 @@ const Question = ({
           )}
           {view === 'editor' ? (
             <div className="space-y-4">
-              <div className="relative h-2">
-                {focusedInput === 'text' && (
-                  <div className="absolute -top-20 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <STEMHelper onInsert={(cmd) => {
-                      const newText = q.text + cmd;
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: newText} : qu));
-                    }} />
-                  </div>
-                )}
-              </div>
               <textarea 
                 onFocus={() => setFocusedInput('text')}
                 onBlur={() => setFocusedInput(null)}
                 rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
+              
+              {focusedInput === 'text' && (
+                <STEMHelper onInsert={(cmd) => {
+                  const newText = q.text + cmd;
+                  setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: newText} : qu));
+                }} />
+              )}
               <div className="bg-white border border-slate-100 p-4 rounded-2xl text-sm font-bold text-slate-800 shadow-inner">
                 <span className="text-[9px] font-black uppercase text-indigo-400 block mb-2 tracking-widest">Преглед во реално време:</span>
                 <RenderContent text={q.text} view="preview" />
@@ -303,21 +300,20 @@ const Question = ({
                   </div>
                   
                   {view === 'editor' ? (
-                    <div className="flex-1 relative pt-2">
-                      {focusedInput === `option-${oIdx}` && (
-                        <div className="absolute -top-32 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
-                          <STEMHelper onInsert={(cmd) => {
-                            const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
-                            setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                          }} />
-                        </div>
-                      )}
+                    <div className="flex-1 space-y-3">
                       <input 
                         onFocus={() => setFocusedInput(`option-${oIdx}`)}
                         onBlur={() => setFocusedInput(null)}
                         value={opt} onChange={e => {
                         const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
                       }} className="w-full bg-transparent border-b-2 border-slate-100 focus:border-indigo-400 outline-none text-xl font-black h-12 transition-colors" placeholder={`Опција ${String.fromCharCode(65 + oIdx)}...`} />
+                      
+                      {focusedInput === `option-${oIdx}` && (
+                        <STEMHelper onInsert={(cmd) => {
+                          const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
+                          setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                        }} />
+                      )}
                     </div>
                   ) : (
                     <div className="flex-1 pt-2">

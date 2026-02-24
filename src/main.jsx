@@ -6,11 +6,11 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc } from 'fi
 import { 
   Plus, Trash2, Printer, Eye, Settings, Layout, Type, CheckSquare, Split, 
   ListOrdered, HelpCircle, Minus, List as ListIcon, Square, Table as TableIcon, 
-  Grid3X3, Layers, CircleDot, CheckCircle2, Image as ImageIcon, FileText, 
+  Grid3X3, Layers, CircleDot, CheckCircle2, ImageIcon, FileText, 
   KeyRound, School, Shuffle, Columns, Info, Beaker, Sigma, MoveVertical,
   ChevronDown, BookOpen, Languages, Globe, History, Zap, Sparkles, ArrowRight, Clock, Trophy,
   Cloud, Share2, Search, ExternalLink, X, Play, MousePointer2, AlignJustify, 
-  Copy, AlertCircle, Check, Hash, RotateCcw, Target, Library, Save
+  Copy, AlertCircle, Check, Hash, RotateCcw, Target, Library, Save, Menu, PanelLeftClose
 } from 'lucide-react';
 
 // Import refactored components
@@ -47,6 +47,7 @@ const App = () => {
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
   const [lang, setLang] = useState('mk');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const translations = {
     mk: {
@@ -460,9 +461,17 @@ const App = () => {
 
       {/* Navbar */}
       <nav id="main-nav" className={`bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-[110] shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 0 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl bg-white' : ''}`}>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-          <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Zap size={20} /></div>
-          <span className="font-black text-lg uppercase tracking-tighter">МакедоТест</span>
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-white hover:text-indigo-600 transition shadow-sm print:hidden"
+          >
+            {sidebarOpen ? <PanelLeftClose size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
+            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Zap size={20} /></div>
+            <span className="font-black text-lg uppercase tracking-tighter">МакедоТест</span>
+          </div>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
           {['editor', 'preview', 'answerKey', 'answerSheet'].map(v => (
@@ -562,10 +571,10 @@ const App = () => {
         </div>
       </nav>
 
-      <div className="flex max-w-[1600px] mx-auto min-h-[calc(100vh-80px)]">
+      <div className="flex max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] transition-all duration-500">
         {/* Sidebar */}
-        <aside id="toolbox-sidebar" className={`w-80 border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}>
-          <div className="space-y-10">
+        <aside id="toolbox-sidebar" className={`${sidebarOpen ? 'w-80 opacity-100' : 'w-0 opacity-0 pointer-events-none'} border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}>
+          <div className={`${sidebarOpen ? 'block' : 'hidden'} space-y-10`}>
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plus size={12} /> {t('toolbox')}</h3>
@@ -891,6 +900,33 @@ const App = () => {
       {duplicateAlert && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl animate-in slide-in-from-bottom-5 z-[200]">
           {duplicateAlert}
+        </div>
+      )}
+
+      {/* Floating Action Button for adding questions when sidebar is closed */}
+      {!sidebarOpen && view === 'editor' && (
+        <div className="fixed bottom-10 left-10 z-[200] group">
+           <div className="absolute bottom-full left-0 mb-4 flex flex-col gap-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all transform translate-y-4 group-hover:translate-y-0">
+              {['multiple', 'true-false', 'short-answer', 'section'].map(type => (
+                <button 
+                  key={type} 
+                  onClick={() => addQuestion(type)}
+                  className="bg-white border-2 border-indigo-100 p-4 rounded-2xl shadow-xl hover:border-indigo-600 hover:scale-105 transition-all flex items-center gap-3 whitespace-nowrap"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    {questionTypes.find(t => t.id === type)?.icon || <Plus size={16} />}
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-slate-600">{questionTypes.find(t => t.id === type)?.label}</span>
+                </button>
+              ))}
+              <button onClick={() => setSidebarOpen(true)} className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl hover:bg-indigo-600 transition flex items-center gap-3">
+                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center"><Library size={16} /></div>
+                 <span className="text-[10px] font-black uppercase">Сите опции...</span>
+              </button>
+           </div>
+           <button className="w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-2xl shadow-indigo-200 flex items-center justify-center hover:bg-indigo-700 hover:rotate-90 transition-all duration-500">
+              <Plus size={32} />
+           </button>
         </div>
       )}
 
