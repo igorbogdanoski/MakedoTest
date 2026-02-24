@@ -617,98 +617,35 @@ const Question = ({
         )}
 
         {q.type === 'diagram' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {view === 'editor' ? (
-              <div className="flex flex-col gap-4">
-                <div className="flex gap-4">
-                  <input placeholder="Линк до слика на дијаграм..." value={q.imageUrl || ''} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, imageUrl: e.target.value} : qu))} className="flex-1 bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 font-bold" />
-                  <button 
-                    onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, showGrid: !qu.showGrid} : qu))}
-                    className={`px-6 rounded-2xl font-black text-[10px] uppercase transition ${q.showGrid ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-                  >
-                    <Grid3X3 size={16} className="mb-1 mx-auto" /> Коорд. систем
-                  </button>
-                </div>
-                {q.imageUrl && (
-                  <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-center gap-3">
-                    <AlertCircle size={16} className="text-amber-500" />
-                    <p className="text-[10px] font-black uppercase text-amber-600 tracking-tight">Совет: Кликнете на сликата за да поставите точка за означување.</p>
-                  </div>
-                )}
+              <div className="flex gap-4">
+                <input placeholder="Линк до слика на дијаграм..." value={q.imageUrl || ''} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, imageUrl: e.target.value} : qu))} className="flex-1 bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 font-bold" />
+                <button 
+                  onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, showGrid: !qu.showGrid} : qu))}
+                  className={`px-6 rounded-2xl font-black text-[10px] uppercase transition ${q.showGrid ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                >
+                  <Grid3X3 size={16} className="mb-1 mx-auto" /> Коорд. систем
+                </button>
               </div>
             ) : null}
             {(q.imageUrl || q.showGrid) && (
-              <div 
-                onClick={(e) => {
-                  if (view !== 'editor' || !q.imageUrl) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                  const newMarkers = [...(q.markers || []), { x, y, label: (q.markers?.length || 0) + 1 }];
-                  setQuestions(questions.map(qu => qu.id === q.id ? {...qu, markers: newMarkers} : qu));
-                }}
-                className={`relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-white shadow-xl max-w-2xl mx-auto aspect-square flex items-center justify-center cursor-crosshair group`}
-              >
+              <div className="relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-white shadow-xl max-w-2xl mx-auto aspect-square flex items-center justify-center">
                 {q.showGrid && (
                   <div className="absolute inset-0">
                     <CoordinateSystem />
                   </div>
                 )}
-                {q.imageUrl && <img src={q.imageUrl} alt="Diagram" className="relative z-10 max-w-full max-h-full object-contain mix-blend-multiply pointer-events-none" />}
-                
-                {(q.markers || []).map((m, mIdx) => (
-                  <div 
-                    key={mIdx}
-                    style={{ left: `${m.x}%`, top: `${m.y}%` }}
-                    className="absolute z-20 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black shadow-lg border-2 border-white group-hover:scale-110 transition"
-                  >
-                    {mIdx + 1}
-                    {view === 'editor' && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newMarkers = q.markers.filter((_, idx) => idx !== mIdx);
-                          setQuestions(questions.map(qu => qu.id === q.id ? {...qu, markers: newMarkers} : qu));
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
-                      >
-                        <X size={10} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {q.imageUrl && <img src={q.imageUrl} alt="Diagram" className="relative z-10 max-w-full max-h-full object-contain mix-blend-multiply" />}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-x-10 gap-y-4 mt-10">
-               {(q.markers || []).map((m, i) => (
-                 <div key={i} className="flex items-center gap-4 p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
-                    <span className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black shadow-md">{i + 1}</span>
-                    <div className="flex-1">
-                      {view === 'editor' ? (
-                        <input 
-                          placeholder="Точен одговор за оваа точка..." 
-                          value={m.answer || ''} 
-                          onChange={(e) => {
-                            const newMarkers = q.markers.map((marker, idx) => idx === i ? {...marker, answer: e.target.value} : marker);
-                            setQuestions(questions.map(qu => qu.id === q.id ? {...qu, markers: newMarkers} : qu));
-                          }}
-                          className="w-full bg-transparent border-b border-slate-200 outline-none font-bold text-sm focus:border-indigo-400 transition"
-                        />
-                      ) : (
-                        view === 'answerKey' ? (
-                          <span className="font-black text-indigo-600 underline decoration-indigo-200">{m.answer}</span>
-                        ) : (
-                          <div className="border-b-2 border-slate-200 w-full h-6" />
-                        )
-                      )}
-                    </div>
+            <div className="space-y-4 mt-6">
+               {[...Array(5)].map((_, i) => (
+                 <div key={i} className="flex items-center gap-4">
+                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">{i + 1}</span>
+                    <div className="border-b-2 border-slate-200 flex-1 h-6" />
                  </div>
                ))}
-               {view === 'editor' && (!q.markers || q.markers.length === 0) && (
-                 <div className="col-span-2 text-center p-8 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-bold italic">
-                    Кликнете на сликата погоре за да поставите точки за означување
-                 </div>
-               )}
             </div>
           </div>
         )}

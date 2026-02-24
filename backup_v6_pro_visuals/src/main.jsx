@@ -73,13 +73,7 @@ const App = () => {
       student: "Ученик",
       grade: "Одд.",
       date: "Датум",
-      teacherSignature: "Потпис на Наставник",
-      geometry: "Геометрија",
-      базични: "Базични",
-      текстуални: "Текстуални",
-      логички: "Логички",
-      листа: "Листа",
-      напредни: "Напредни"
+      teacherSignature: "Потпис на Наставник"
     },
     sq: {
       quickStart: "Fillim i shpejtë",
@@ -105,13 +99,7 @@ const App = () => {
       student: "Nxënësi",
       grade: "Klasa",
       date: "Data",
-      teacherSignature: "Nënshkrimi i mësimdhënësit",
-      geometry: "Gjeometria",
-      базични: "Bazat",
-      текстуални: "Tekstuale",
-      логички: "Logjike",
-      листа: "Lista",
-      напредни: "Të avancuara"
+      teacherSignature: "Nënshkrimi i mësimdhënësit"
     }
   };
 
@@ -246,12 +234,12 @@ const App = () => {
     { id: 'short-answer', label: 'Краток одговор', icon: <Type size={16} />, cat: 'текстуални', subjects: ['all'], priority: 10 },
     { id: 'essay', label: 'Есеј / Долг одговор', icon: <FileText size={16} />, cat: 'текстуални', subjects: ['languages', 'history'], priority: 5 },
     { id: 'matching', label: 'Поврзување', icon: <Split size={16} />, cat: 'логички', subjects: ['all'], priority: 8 },
-    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички', subjects: ['history', 'stem', 'geometry'], priority: 7 },
+    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички', subjects: ['history', 'stem'], priority: 7 },
     { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа', subjects: ['all'], priority: 6 },
     { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни', subjects: ['stem'], priority: 9 },
     { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни', subjects: ['stem'], priority: 8 },
     { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни', subjects: ['all'], priority: 5 },
-    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни', subjects: ['stem', 'geography', 'geometry'], priority: 7 },
+    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни', subjects: ['stem', 'geography'], priority: 7 },
     { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични', subjects: ['all'], priority: 8 },
     { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'], priority: 7 },
   ];
@@ -261,14 +249,12 @@ const App = () => {
     'текстуални': <Type size={14} className="text-blue-500" />,
     'логички': <Shuffle size={14} className="text-purple-500" />,
     'листа': <ListOrdered size={14} className="text-emerald-500" />,
-    'напредни': <Sparkles size={14} className="text-indigo-500" />,
-    'geometry': <Grid3X3 size={14} className="text-indigo-500" />
+    'напредни': <Sparkles size={14} className="text-indigo-500" />
   };
 
   const categories = [
     { id: 'all', label: 'Сите' },
     { id: 'stem', label: 'СТЕМ (Мат/Физ/Хем)' },
-    { id: 'geometry', label: 'Геометрија' },
     { id: 'languages', label: 'Јазици (Мак/Анг)' },
     { id: 'history', label: 'Историја/Гео' }
   ];
@@ -288,12 +274,11 @@ const App = () => {
     const subj = testInfo.subject.toLowerCase();
     const isSTEM = subj.includes('мат') || subj.includes('физ') || subj.includes('хем') || subj.includes('наук');
     const isLang = subj.includes('мак') || subj.includes('анг') || subj.includes('јаз');
-    const isGeo = subj.includes('гео');
 
     types.sort((a, b) => {
       // 1. Subject relevance
-      const aRel = (isSTEM && a.subjects.includes('stem')) || (isLang && a.subjects.includes('languages')) || (isGeo && a.subjects.includes('geometry'));
-      const bRel = (isSTEM && b.subjects.includes('stem')) || (isLang && b.subjects.includes('languages')) || (isGeo && b.subjects.includes('geometry'));
+      const aRel = (isSTEM && a.subjects.includes('stem')) || (isLang && a.subjects.includes('languages'));
+      const bRel = (isSTEM && b.subjects.includes('stem')) || (isLang && b.subjects.includes('languages'));
       
       if (aRel && !bRel) return -1;
       if (!aRel && bRel) return 1;
@@ -598,11 +583,8 @@ const App = () => {
               </div>
 
               <div className="space-y-10">
-                {['базични', 'текстуални', 'логички', 'листа', 'напредни', 'geometry'].map(category => {
-                  const items = filteredTypes.filter(t => t.cat === category || (category === 'geometry' && t.subjects.includes('geometry')));
-                  // Avoid showing duplicates in both their original category and geometry if they are already prominent
-                  const finalItems = category === 'geometry' ? items : items.filter(t => !t.subjects.includes('geometry') || category !== 'напредни');
-                  
+                {['базични', 'текстуални', 'логички', 'листа', 'напредни'].map(category => {
+                  const items = filteredTypes.filter(t => t.cat === category);
                   if (items.length === 0) return null;
                   return (
                     <div key={category} className="space-y-5 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100/50">
@@ -610,10 +592,10 @@ const App = () => {
                         <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
                           {categoryIcons[category]}
                         </div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t(category)}</h4>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{category}</h4>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        {finalItems.map(type => (
+                        {items.map(type => (
                           <button 
                             key={type.id} 
                             onClick={() => addQuestion(type.id)} 
