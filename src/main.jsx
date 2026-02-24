@@ -190,11 +190,37 @@ const App = () => {
   ];
 
   const [activeCategory, setActiveCategory] = useState('all');
+  const [typeSearch, setTypeSearch] = useState('');
 
   const filteredTypes = useMemo(() => {
-    if (activeCategory === 'all') return questionTypes;
-    return questionTypes.filter(t => t.subjects.includes(activeCategory) || t.subjects.includes('all'));
-  }, [activeCategory]);
+    let types = [...questionTypes];
+    
+    // 1. Search filter
+    if (typeSearch) {
+      types = types.filter(t => t.label.toLowerCase().includes(typeSearch.toLowerCase()));
+    }
+
+    // 2. Smart Subject-Aware Sorting
+    const subj = testInfo.subject.toLowerCase();
+    const isSTEM = subj.includes('мат') || subj.includes('физ') || subj.includes('хем') || subj.includes('наук');
+    const isLang = subj.includes('мак') || subj.includes('анг') || subj.includes('јаз');
+
+    types.sort((a, b) => {
+      if (isSTEM) {
+        if (a.subjects.includes('stem') && !b.subjects.includes('stem')) return -1;
+        if (!a.subjects.includes('stem') && b.subjects.includes('stem')) return 1;
+      }
+      if (isLang) {
+        if (a.subjects.includes('languages') && !b.subjects.includes('languages')) return -1;
+        if (!a.subjects.includes('languages') && b.subjects.includes('languages')) return 1;
+      }
+      return 0;
+    });
+
+    // 3. Category Filter
+    if (activeCategory === 'all') return types;
+    return types.filter(t => t.subjects.includes(activeCategory) || t.subjects.includes('all'));
+  }, [activeCategory, typeSearch, testInfo.subject]);
 
   const tutorialSteps = [
     { title: "Добредојдовте!", text: "Ова е МакедоТест Про v6.0. Ајде да ја разгледаме околината.", targetId: "main-nav" },
@@ -228,8 +254,16 @@ const App = () => {
   }, []);
 
   const handlePrint = () => {
-    window.focus();
-    window.print();
+    const originalView = view;
+    if (originalView === 'editor') {
+      setView('preview');
+      setTimeout(() => {
+        window.print();
+        setView(originalView);
+      }, 300);
+    } else {
+      window.print();
+    }
   };
 
   const addQuestion = (type) => {
@@ -371,23 +405,48 @@ const App = () => {
         <aside id="toolbox-sidebar" className={`w-80 border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}>
           <div className="space-y-10">
             <div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Plus size={12} /> Додај задача</h3>
-              <div className="flex flex-wrap gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plus size={12} /> Блокови за задачи</h3>
+                {testInfo.subject.length > 5 && (
+                  <div className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase animate-pulse">Smart: {testInfo.subject.split(' ')[0]}</div>
+                )}
+              </div>
+
+              <div className="relative mb-6">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                 <input 
+                  type="text" 
+                  placeholder="Пребарај формат..." 
+                  value={typeSearch}
+                  onChange={e => setTypeSearch(e.target.value)}
+                  className="w-full bg-slate-100 border-none rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
+                 />
+              </div>
+
+              <div className="flex flex-wrap gap-1 mb-8 bg-slate-100 p-1 rounded-xl">
                 {categories.map(cat => (
                   <button 
                     key={cat.id} 
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeCategory === cat.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${activeCategory === cat.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     {cat.label.split(' ')[0]}
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-1 gap-2.5">
+
+              <div className="grid grid-cols-2 gap-3">
                 {filteredTypes.map(type => (
-                  <button key={type.id} onClick={() => addQuestion(type.id)} className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-left shadow-sm">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">{type.icon}</div>
-                    <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-900">{type.label}</span>
+                  <button 
+                    key={type.id} 
+                    onClick={() => addQuestion(type.id)} 
+                    className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-center shadow-sm relative overflow-hidden"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">
+                      {type.icon}
+                    </div>
+                    <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tighter">{type.label}</span>
+                    {type.subjects.includes('stem') && <div className="absolute top-1 right-1 w-1 h-1 bg-indigo-400 rounded-full" />}
                   </button>
                 ))}
               </div>

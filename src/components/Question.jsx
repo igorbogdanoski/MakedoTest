@@ -192,6 +192,10 @@ const Question = ({
                 onFocus={() => setFocusedInput('text')}
                 onBlur={() => setFocusedInput(null)}
                 rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
+              <div className="bg-white border border-slate-100 p-4 rounded-2xl text-sm font-bold text-slate-800 shadow-inner">
+                <span className="text-[9px] font-black uppercase text-indigo-400 block mb-2 tracking-widest">Преглед во реално време:</span>
+                <RenderContent text={q.text} view="preview" />
+              </div>
               <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="bg-slate-50 p-2 rounded-xl text-slate-400"><Globe size={14} /></div>
                 <input 
@@ -217,42 +221,55 @@ const Question = ({
       </div>
       <div className="ml-16 font-sans">
         {(q.type === 'multiple' || q.type === 'checklist') && (
-          <div className={`grid gap-4 grid-cols-${q.columns || 1}`}>
+          <div className={`grid gap-6 grid-cols-${q.columns || 1} w-full`}>
             {q.options.map((opt, oIdx) => (
-              <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
-                <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : (q.type === 'checklist' ? 'rounded-lg' : 'rounded-full')} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
-                  <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
-                </div>
-                {view === 'editor' ? (
-                  <div className="flex-1 flex flex-col relative">
-                    {focusedInput === `option-${oIdx}` && (
-                      <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
-                        <STEMHelper onInsert={(cmd) => {
-                          const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
-                          setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                        }} />
-                      </div>
-                    )}
-                    <input 
-                      onFocus={() => setFocusedInput(`option-${oIdx}`)}
-                      onBlur={() => setFocusedInput(null)}
-                      value={opt} onChange={e => {
-                      const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                    }} className="bg-transparent border-b w-full outline-none text-base font-bold h-10" />
+              <div key={oIdx} className={`flex flex-col gap-2 rounded-3xl border-2 transition p-4 ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 flex-shrink-0 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : (q.type === 'checklist' ? 'rounded-lg' : 'rounded-full')} border-2 flex items-center justify-center text-xs font-black ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-md'}`}>
+                    <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
                   </div>
-                ) : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
-                {view === 'editor' && (
-                  <button onClick={() => {
-                    if (q.type === 'multiple') {
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu));
-                    } else {
-                      const cur = q.corrects || [];
-                      const next = cur.includes(oIdx) ? cur.filter(c => c !== oIdx) : [...cur, oIdx];
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, corrects: next} : qu));
-                    }
-                  }} className={`p-1 transition ${(q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'text-emerald-500' : 'text-slate-200'}`}>
-                    {q.type === 'checklist' ? <CheckSquare size={18} /> : <CheckCircle2 size={18} />}
-                  </button>
+                  
+                  {view === 'editor' ? (
+                    <div className="flex-1 relative">
+                      {focusedInput === `option-${oIdx}` && (
+                        <div className="absolute -top-12 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
+                          <STEMHelper onInsert={(cmd) => {
+                            const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
+                            setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                          }} />
+                        </div>
+                      )}
+                      <input 
+                        onFocus={() => setFocusedInput(`option-${oIdx}`)}
+                        onBlur={() => setFocusedInput(null)}
+                        value={opt} onChange={e => {
+                        const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                      }} className="w-full bg-transparent border-b-2 border-slate-100 focus:border-indigo-400 outline-none text-base font-bold h-10 transition-colors" placeholder={`Опција ${String.fromCharCode(65 + oIdx)}...`} />
+                    </div>
+                  ) : (
+                    <div className="flex-1">
+                      <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />
+                    </div>
+                  )}
+
+                  {view === 'editor' && (
+                    <button onClick={() => {
+                      if (q.type === 'multiple') {
+                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, correct: oIdx} : qu));
+                      } else {
+                        const cur = q.corrects || [];
+                        const next = cur.includes(oIdx) ? cur.filter(c => c !== oIdx) : [...cur, oIdx];
+                        setQuestions(questions.map(qu => qu.id === q.id ? {...qu, corrects: next} : qu));
+                      }
+                    }} className={`p-2 rounded-xl transition-all hover:scale-110 flex-shrink-0 ${(q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'text-emerald-500 bg-emerald-50 shadow-sm' : 'text-slate-200 grayscale opacity-40 hover:opacity-100 hover:grayscale-0'}`}>
+                      {q.type === 'checklist' ? <CheckSquare size={20} /> : <CheckCircle2 size={20} />}
+                    </button>
+                  )}
+                </div>
+                {view === 'editor' && opt && (
+                  <div className="mt-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100 shadow-inner">
+                    <RenderContent text={opt} view="preview" className="text-xs font-bold text-slate-500" />
+                  </div>
                 )}
               </div>
             ))}
