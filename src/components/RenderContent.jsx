@@ -15,10 +15,10 @@ const RenderContent = ({ text, view, className = "" }) => {
             .replace(/\\sqrt\{(.+?)\}/g, '<span class="mr-1">√</span><span class="border-t border-indigo-400">$1</span>')
             .replace(/\\sqrt/g, '√')
             .replace(/\^\{(.+?)\}/g, '<sup class="text-[0.6em] ml-0.5">$1</sup>')
-            .replace(/\^(\d+)/g, '<sup class="text-[0.6em] ml-0.5">$1</sup>')
+            .replace(/\^(\w+)/g, '<sup class="text-[0.6em] ml-0.5">$1</sup>')
             .replace(/_\{(.+?)\}/g, '<sub class="text-[0.6em] ml-0.5">$1</sub>')
-            .replace(/_(\d+)/g, '<sub class="text-[0.6em] ml-0.5">$1</sub>')
-            .replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '<span class="inline-flex flex-col items-center align-middle mx-1"><span class="border-b border-indigo-400 px-1">$1</span><span class="px-1">$2</span></span>')
+            .replace(/_(\w+)/g, '<sub class="text-[0.6em] ml-0.5">$1</sub>')
+            .replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '<span class="inline-flex flex-col items-center align-middle mx-1 text-[0.8em]"><span class="border-b border-indigo-400 px-1 leading-tight">$1</span><span class="px-1 leading-tight">$2</span></span>')
             .replace(/\\cdot/g, ' · ')
             .replace(/\\approx/g, ' ≈ ')
             .replace(/\\pi/g, 'π')
@@ -26,7 +26,13 @@ const RenderContent = ({ text, view, className = "" }) => {
             .replace(/\\alpha/g, 'α')
             .replace(/\\beta/g, 'β')
             .replace(/\\gamma/g, 'γ')
-            .replace(/\\Delta/g, 'Δ');
+            .replace(/\\Delta/g, 'Δ')
+            .replace(/\\Sigma/g, 'Σ')
+            .replace(/\\Omega/g, 'Ω')
+            .replace(/\\mu/g, 'μ')
+            .replace(/\\infty/g, '∞')
+            .replace(/\\le/g, '≤')
+            .replace(/\\ge/g, '≥');
 
           return (
             <span 

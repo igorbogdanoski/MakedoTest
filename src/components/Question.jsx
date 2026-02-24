@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma } from 'lucide-react';
 import RenderContent from './RenderContent';
 
@@ -11,10 +11,14 @@ const STEMHelper = ({ onInsert }) => (
       { label: '½', cmd: '$\\frac{}{}$' },
       { label: 'π', cmd: '$\\pi$' },
       { label: '·', cmd: '$\\cdot$' },
-      { label: '±', cmd: '$\\pm$' }
+      { label: '±', cmd: '$\\pm$' },
+      { label: '∞', cmd: '$\\infty$' },
+      { label: '≤', cmd: '$\\le$' },
+      { label: '≥', cmd: '$\\ge$' }
     ].map(tool => (
       <button 
         key={tool.label}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => { e.preventDefault(); onInsert(tool.cmd); }}
         className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black hover:bg-indigo-600 hover:text-white transition shadow-sm"
       >
@@ -31,6 +35,7 @@ const Question = ({
   saveToBank, showHelp, setShowHelp, helpContent, 
   randomizeAnswers, duplicates, moveQuestion 
 }) => {
+  const [focusedInput, setFocusedInput] = useState(null);
   let displayNum = (idx + 1).toString();
   if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
   const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
@@ -173,11 +178,20 @@ const Question = ({
           )}
           {view === 'editor' ? (
             <div className="space-y-4">
-              <STEMHelper onInsert={(cmd) => {
-                const newText = q.text + cmd;
-                setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: newText} : qu));
-              }} />
-              <textarea rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
+              <div className="relative h-2">
+                {focusedInput === 'text' && (
+                  <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <STEMHelper onInsert={(cmd) => {
+                      const newText = q.text + cmd;
+                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: newText} : qu));
+                    }} />
+                  </div>
+                )}
+              </div>
+              <textarea 
+                onFocus={() => setFocusedInput('text')}
+                onBlur={() => setFocusedInput(null)}
+                rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
               <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="bg-slate-50 p-2 rounded-xl text-slate-400"><Globe size={14} /></div>
                 <input 
@@ -210,14 +224,21 @@ const Question = ({
                   <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
                 </div>
                 {view === 'editor' ? (
-                  <div className="flex-1 flex flex-col gap-2">
-                    <STEMHelper onInsert={(cmd) => {
-                      const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                    }} />
-                    <input value={opt} onChange={e => {
+                  <div className="flex-1 flex flex-col relative">
+                    {focusedInput === `option-${oIdx}` && (
+                      <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
+                        <STEMHelper onInsert={(cmd) => {
+                          const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
+                          setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                        }} />
+                      </div>
+                    )}
+                    <input 
+                      onFocus={() => setFocusedInput(`option-${oIdx}`)}
+                      onBlur={() => setFocusedInput(null)}
+                      value={opt} onChange={e => {
                       const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                    }} className="bg-transparent border-b w-full outline-none text-base font-bold" />
+                    }} className="bg-transparent border-b w-full outline-none text-base font-bold h-10" />
                   </div>
                 ) : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
                 {view === 'editor' && (
@@ -272,23 +293,37 @@ const Question = ({
                 {(q.matches || [{s:'', a:''}]).map((m, mIdx) => (
                   <div key={mIdx} className="space-y-2 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex gap-4 items-center">
-                      <div className="flex-1 flex flex-col gap-2">
-                         <STEMHelper onInsert={(cmd) => {
-                           const nm = [...(q.matches || [])]; nm[mIdx].s = (nm[mIdx].s || '') + cmd;
-                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                         }} />
-                         <input placeholder="Изјава..." value={m.s} onChange={e => {
+                      <div className="flex-1 flex flex-col relative">
+                         {focusedInput === `match-s-${mIdx}` && (
+                           <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
+                             <STEMHelper onInsert={(cmd) => {
+                               const nm = [...(q.matches || [])]; nm[mIdx].s = (nm[mIdx].s || '') + cmd;
+                               setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                             }} />
+                           </div>
+                         )}
+                         <input 
+                            onFocus={() => setFocusedInput(`match-s-${mIdx}`)}
+                            onBlur={() => setFocusedInput(null)}
+                            placeholder="Изјава..." value={m.s} onChange={e => {
                            const nm = [...(q.matches || [])]; nm[mIdx].s = e.target.value;
                            setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
                          }} className="w-full bg-slate-50 p-3 rounded-xl border border-slate-100 font-bold" />
                       </div>
                       <ArrowRight size={16} className="text-slate-300" />
-                      <div className="w-40 flex flex-col gap-2">
-                         <STEMHelper onInsert={(cmd) => {
-                           const nm = [...(q.matches || [])]; nm[mIdx].a = (nm[mIdx].a || '') + cmd;
-                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                         }} />
-                         <input placeholder="Одговор..." value={m.a} onChange={e => {
+                      <div className="w-40 flex flex-col relative">
+                         {focusedInput === `match-a-${mIdx}` && (
+                           <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
+                             <STEMHelper onInsert={(cmd) => {
+                               const nm = [...(q.matches || [])]; nm[mIdx].a = (nm[mIdx].a || '') + cmd;
+                               setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                             }} />
+                           </div>
+                         )}
+                         <input 
+                            onFocus={() => setFocusedInput(`match-a-${mIdx}`)}
+                            onBlur={() => setFocusedInput(null)}
+                            placeholder="Одговор..." value={m.a} onChange={e => {
                            const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
                            setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
                          }} className="w-full bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
@@ -355,10 +390,22 @@ const Question = ({
                         const cellId = `${r}-${c}`;
                         const cell = q.tableData?.data?.[cellId] || { val: '', isAns: false };
                         return (
-                          <td key={c} className="border border-slate-200 p-0 min-w-[100px]">
+                          <td key={c} className="border border-slate-200 p-0 min-w-[120px]">
                             {view === 'editor' ? (
                               <div className={`relative group/cell ${cell.isAns ? 'bg-emerald-50' : 'bg-white'}`}>
-                                <input value={cell.val} onChange={e => {
+                                {focusedInput === `table-${cellId}` && (
+                                  <div className="absolute -top-10 left-0 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap">
+                                    <STEMHelper onInsert={(cmd) => {
+                                      const data = {...(q.tableData?.data || {})};
+                                      data[cellId] = {...cell, val: (cell.val || '') + cmd};
+                                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
+                                    }} />
+                                  </div>
+                                )}
+                                <input 
+                                  onFocus={() => setFocusedInput(`table-${cellId}`)}
+                                  onBlur={() => setFocusedInput(null)}
+                                  value={cell.val} onChange={e => {
                                   const data = {...(q.tableData?.data || {})};
                                   data[cellId] = {...cell, val: e.target.value};
                                   setQuestions(questions.map(qu => qu.id === q.id ? {...qu, tableData: {...qu.tableData, data}} : qu));
