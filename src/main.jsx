@@ -164,23 +164,37 @@ const App = () => {
   }, [questions]);
 
   const questionTypes = [
-    { id: 'multiple', label: 'Понудени одговори', icon: <CheckSquare size={16} />, cat: 'базични' },
-    { id: 'true-false', label: 'Точно/Неточно', icon: <HelpCircle size={16} />, cat: 'базични' },
-    { id: 'fill-blanks', label: 'Пополни празнини', icon: <Minus size={16} />, cat: 'текстуални' },
-    { id: 'selection', label: 'Селекција (Инлајн)', icon: <CircleDot size={16} />, cat: 'напредни' },
-    { id: 'multi-match', label: 'Мулти-поврзување', icon: <Grid3X3 size={16} />, cat: 'логички' },
-    { id: 'short-answer', label: 'Краток одговор', icon: <Type size={16} />, cat: 'текстуални' },
-    { id: 'essay', label: 'Есеј / Долг одговор', icon: <FileText size={16} />, cat: 'текстуални' },
-    { id: 'matching', label: 'Поврзување', icon: <Split size={16} />, cat: 'логички' },
-    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички' },
-    { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа' },
-    { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни' },
-    { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни' },
-    { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни' },
-    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни' },
-    { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични' },
-    { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични' },
+    { id: 'multiple', label: 'Понудени одговори', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'] },
+    { id: 'true-false', label: 'Точно/Неточно', icon: <HelpCircle size={16} />, cat: 'базични', subjects: ['all'] },
+    { id: 'fill-blanks', label: 'Пополни празнини', icon: <Minus size={16} />, cat: 'текстуални', subjects: ['languages', 'history'] },
+    { id: 'selection', label: 'Селекција (Инлајн)', icon: <CircleDot size={16} />, cat: 'напредни', subjects: ['languages'] },
+    { id: 'multi-match', label: 'Мулти-поврзување', icon: <Grid3X3 size={16} />, cat: 'логички', subjects: ['stem', 'all'] },
+    { id: 'short-answer', label: 'Краток одговор', icon: <Type size={16} />, cat: 'текстуални', subjects: ['all'] },
+    { id: 'essay', label: 'Есеј / Долг одговор', icon: <FileText size={16} />, cat: 'текстуални', subjects: ['languages', 'history'] },
+    { id: 'matching', label: 'Поврзување', icon: <Split size={16} />, cat: 'логички', subjects: ['all'] },
+    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички', subjects: ['history', 'stem'] },
+    { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа', subjects: ['all'] },
+    { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни', subjects: ['stem'] },
+    { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни', subjects: ['stem'] },
+    { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни', subjects: ['all'] },
+    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни', subjects: ['stem', 'geography'] },
+    { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични', subjects: ['all'] },
+    { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'] },
   ];
+
+  const categories = [
+    { id: 'all', label: 'Сите' },
+    { id: 'stem', label: 'СТЕМ (Мат/Физ/Хем)' },
+    { id: 'languages', label: 'Јазици (Мак/Анг)' },
+    { id: 'history', label: 'Историја/Гео' }
+  ];
+
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const filteredTypes = useMemo(() => {
+    if (activeCategory === 'all') return questionTypes;
+    return questionTypes.filter(t => t.subjects.includes(activeCategory) || t.subjects.includes('all'));
+  }, [activeCategory]);
 
   const tutorialSteps = [
     { title: "Добредојдовте!", text: "Ова е МакедоТест Про v6.0. Ајде да ја разгледаме околината.", targetId: "main-nav" },
@@ -261,7 +275,7 @@ const App = () => {
     setQuestions(newQs);
   };
 
-  if (view === 'landing') return <LandingPage setView={setView} setShowTutorial={setShowTutorial} setTutorialStep(setTutorialStep) demoStep={demoStep} />;
+  if (view === 'landing') return <LandingPage setView={setView} setShowTutorial={setShowTutorial} setTutorialStep={setTutorialStep} demoStep={demoStep} />;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 relative overflow-x-hidden">
@@ -358,8 +372,19 @@ const App = () => {
           <div className="space-y-10">
             <div>
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Plus size={12} /> Додај задача</h3>
+              <div className="flex flex-wrap gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
+                {categories.map(cat => (
+                  <button 
+                    key={cat.id} 
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeCategory === cat.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    {cat.label.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
               <div className="grid grid-cols-1 gap-2.5">
-                {questionTypes.map(type => (
+                {filteredTypes.map(type => (
                   <button key={type.id} onClick={() => addQuestion(type.id)} className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-left shadow-sm">
                     <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">{type.icon}</div>
                     <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-900">{type.label}</span>
