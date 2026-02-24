@@ -1,6 +1,30 @@
 import React from 'react';
-import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma } from 'lucide-react';
 import RenderContent from './RenderContent';
+
+const STEMHelper = ({ onInsert }) => (
+  <div className="flex gap-2 p-1.5 bg-slate-100/50 rounded-xl border border-slate-200 w-fit">
+    {[
+      { label: '√', cmd: '$\\sqrt{}$' },
+      { label: 'x²', cmd: '$^2$' },
+      { label: 'xₙ', cmd: '$_n$' },
+      { label: '½', cmd: '$\\frac{}{}$' },
+      { label: 'π', cmd: '$\\pi$' },
+      { label: '·', cmd: '$\\cdot$' },
+      { label: '±', cmd: '$\\pm$' }
+    ].map(tool => (
+      <button 
+        key={tool.label}
+        onClick={(e) => { e.preventDefault(); onInsert(tool.cmd); }}
+        className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black hover:bg-indigo-600 hover:text-white transition shadow-sm"
+      >
+        {tool.label}
+      </button>
+    ))}
+    <div className="w-px bg-slate-200 mx-1" />
+    <div className="flex items-center gap-1 text-[7px] font-black text-slate-400 uppercase px-1"><Sigma size={8} /> STEM</div>
+  </div>
+);
 
 const Question = ({ 
   q, idx, view, testInfo, questions, setQuestions, 
@@ -149,6 +173,10 @@ const Question = ({
           )}
           {view === 'editor' ? (
             <div className="space-y-4">
+              <STEMHelper onInsert={(cmd) => {
+                const newText = q.text + cmd;
+                setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: newText} : qu));
+              }} />
               <textarea rows="2" value={q.text} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, text: e.target.value} : qu))} className={`w-full font-bold text-lg bg-slate-50/30 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 transition resize-none leading-relaxed ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`} placeholder={q.type === 'selection' ? "Внесете текст со избори во формат: Ова е {точен|погрешен} пример." : "Внесете задача..."} />
               <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="bg-slate-50 p-2 rounded-xl text-slate-400"><Globe size={14} /></div>
@@ -181,9 +209,17 @@ const Question = ({
                 <div className={`w-8 h-8 ${testInfo.zipGrade ? 'rounded-[30%] rotate-45' : (q.type === 'checklist' ? 'rounded-lg' : 'rounded-full')} border-2 flex items-center justify-center text-[11px] font-black ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-800 text-slate-800 bg-white shadow-sm'}`}>
                   <span className={testInfo.zipGrade ? '-rotate-45' : ''}>{String.fromCharCode(97 + oIdx).toUpperCase()}</span>
                 </div>
-                {view === 'editor' ? <input value={opt} onChange={e => {
-                  const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
-                }} className="bg-transparent border-b w-full outline-none text-base font-bold" /> : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
+                {view === 'editor' ? (
+                  <div className="flex-1 flex flex-col gap-2">
+                    <STEMHelper onInsert={(cmd) => {
+                      const n = [...q.options]; n[oIdx] = (n[oIdx] || '') + cmd; 
+                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                    }} />
+                    <input value={opt} onChange={e => {
+                      const n = [...q.options]; n[oIdx] = e.target.value; setQuestions(questions.map(qu => qu.id === q.id ? {...qu, options: n} : qu));
+                    }} className="bg-transparent border-b w-full outline-none text-base font-bold" />
+                  </div>
+                ) : <RenderContent text={opt} view={view} className="text-base font-bold text-slate-700" />}
                 {view === 'editor' && (
                   <button onClick={() => {
                     if (q.type === 'multiple') {
@@ -234,16 +270,30 @@ const Question = ({
             {view === 'editor' ? (
               <div className="space-y-3">
                 {(q.matches || [{s:'', a:''}]).map((m, mIdx) => (
-                  <div key={mIdx} className="flex gap-4 items-center">
-                    <input placeholder="Изјава..." value={m.s} onChange={e => {
-                      const nm = [...(q.matches || [])]; nm[mIdx].s = e.target.value;
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                    }} className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100 font-bold" />
-                    <ArrowRight size={16} className="text-slate-300" />
-                    <input placeholder="Одговор..." value={m.a} onChange={e => {
-                      const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
-                      setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
-                    }} className="w-40 bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
+                  <div key={mIdx} className="space-y-2 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="flex gap-4 items-center">
+                      <div className="flex-1 flex flex-col gap-2">
+                         <STEMHelper onInsert={(cmd) => {
+                           const nm = [...(q.matches || [])]; nm[mIdx].s = (nm[mIdx].s || '') + cmd;
+                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                         }} />
+                         <input placeholder="Изјава..." value={m.s} onChange={e => {
+                           const nm = [...(q.matches || [])]; nm[mIdx].s = e.target.value;
+                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                         }} className="w-full bg-slate-50 p-3 rounded-xl border border-slate-100 font-bold" />
+                      </div>
+                      <ArrowRight size={16} className="text-slate-300" />
+                      <div className="w-40 flex flex-col gap-2">
+                         <STEMHelper onInsert={(cmd) => {
+                           const nm = [...(q.matches || [])]; nm[mIdx].a = (nm[mIdx].a || '') + cmd;
+                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                         }} />
+                         <input placeholder="Одговор..." value={m.a} onChange={e => {
+                           const nm = [...(q.matches || [])]; nm[mIdx].a = e.target.value;
+                           setQuestions(questions.map(qu => qu.id === q.id ? {...qu, matches: nm} : qu));
+                         }} className="w-full bg-indigo-50 p-3 rounded-xl border border-indigo-100 font-bold text-indigo-600" />
+                      </div>
+                    </div>
                   </div>
                 ))}
                 <button onClick={() => {

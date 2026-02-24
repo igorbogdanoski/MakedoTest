@@ -12,22 +12,26 @@ const RenderContent = ({ text, view, className = "" }) => {
 
         if (part.startsWith('$') && part.endsWith('$')) {
           const formula = part.slice(1, -1)
-            .replace(/\\sqrt\{(.+?)\}/g, '√$1')
+            .replace(/\\sqrt\{(.+?)\}/g, '<span class="mr-1">√</span><span class="border-t border-indigo-400">$1</span>')
             .replace(/\\sqrt/g, '√')
-            .replace(/\^\{(.+?)\}/g, '<sup>$1</sup>')
-            .replace(/\^(\d+)/g, '<sup>$1</sup>')
-            .replace(/_\{(.+?)\}/g, '<sub>$1</sub>')
-            .replace(/_(\d+)/g, '<sub>$1</sub>')
-            .replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '($1/$2)')
-            .replace(/\\cdot/g, '·')
-            .replace(/\\approx/g, '≈')
+            .replace(/\^\{(.+?)\}/g, '<sup class="text-[0.6em] ml-0.5">$1</sup>')
+            .replace(/\^(\d+)/g, '<sup class="text-[0.6em] ml-0.5">$1</sup>')
+            .replace(/_\{(.+?)\}/g, '<sub class="text-[0.6em] ml-0.5">$1</sub>')
+            .replace(/_(\d+)/g, '<sub class="text-[0.6em] ml-0.5">$1</sub>')
+            .replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '<span class="inline-flex flex-col items-center align-middle mx-1"><span class="border-b border-indigo-400 px-1">$1</span><span class="px-1">$2</span></span>')
+            .replace(/\\cdot/g, ' · ')
+            .replace(/\\approx/g, ' ≈ ')
             .replace(/\\pi/g, 'π')
-            .replace(/\\pm/g, '±');
+            .replace(/\\pm/g, ' ± ')
+            .replace(/\\alpha/g, 'α')
+            .replace(/\\beta/g, 'β')
+            .replace(/\\gamma/g, 'γ')
+            .replace(/\\Delta/g, 'Δ');
 
           return (
             <span 
               key={`math-${i}`} 
-              className="font-serif italic text-indigo-700 bg-indigo-50/50 px-1 rounded mx-0.5 border-b border-indigo-200 inline-block leading-none"
+              className="font-serif italic text-indigo-700 bg-indigo-50/30 px-1.5 py-0.5 rounded-lg mx-0.5 border-b-2 border-indigo-100 inline-flex items-center leading-none"
               dangerouslySetInnerHTML={{ __html: formula }}
             />
           );
