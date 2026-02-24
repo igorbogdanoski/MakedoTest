@@ -46,6 +46,64 @@ const App = () => {
   const [showHelp, setShowHelp] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
+  const [lang, setLang] = useState('mk');
+
+  const translations = {
+    mk: {
+      quickStart: "Брз почеток",
+      howItWorks: "Види како работи",
+      editor: "Едитор",
+      preview: "Преглед",
+      print: "Печатење",
+      saveTest: "Зачувај Тест",
+      saving: "Зачувувам...",
+      myTests: "Мои Тестови",
+      questionBank: "Банка",
+      addQuestion: "Додај прашање",
+      toolbox: "Блокови за задачи",
+      searchFormat: "Пребарај формат...",
+      points: "Поени",
+      difficulty: "Тежина",
+      easy: "Лесно",
+      medium: "Средно",
+      hard: "Тешко",
+      totalPoints: "Вкупно поени",
+      estimatedTime: "Проценето време",
+      gradingScale: "Скала на оценки",
+      student: "Ученик",
+      grade: "Одд.",
+      date: "Датум",
+      teacherSignature: "Потпис на Наставник"
+    },
+    sq: {
+      quickStart: "Fillim i shpejtë",
+      howItWorks: "Shih si funksionon",
+      editor: "Redaktues",
+      preview: "Paraqitje",
+      print: "Printo",
+      saveTest: "Ruaj Testin",
+      saving: "Duke ruajtur...",
+      myTests: "Testet e mia",
+      questionBank: "Banka e pyetjeve",
+      addQuestion: "Shto pyetje",
+      toolbox: "Blloqet e pyetjeve",
+      searchFormat: "Kërko formatin...",
+      points: "Pikët",
+      difficulty: "Vështirësia",
+      easy: "Lehtë",
+      medium: "Mesatare",
+      hard: "Vështirë",
+      totalPoints: "Gjithsej pikë",
+      estimatedTime: "Koha e parashikuar",
+      gradingScale: "Shkalla e notimit",
+      student: "Nxënësi",
+      grade: "Klasa",
+      date: "Data",
+      teacherSignature: "Nënshkrimi i mësimdhënësit"
+    }
+  };
+
+  const t = (key) => translations[lang][key] || key;
 
   const helpContent = {
     'multiple': {
@@ -432,6 +490,9 @@ const App = () => {
                 <button onClick={() => setShowPasteModal(true)} title="Пастирај AI Код" className="px-3 py-2 rounded-xl text-slate-400 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1">
                    <Sparkles size={12} />
                 </button>
+                <button onClick={() => alert("AI Vision Digitization: Оваа функција ќе овозможи скенирање на физички тестови преку камера или слика. Во моментов е во фаза на развој.")} title="AI Vision (Скенирај Тест)" className="px-3 py-2 rounded-xl text-slate-400 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1">
+                   <ImageIcon size={12} />
+                </button>
                 <div className="w-px bg-slate-200 mx-1 self-stretch" />
                 <button title="Извези QTI (XML)" onClick={() => {
                    const qti = `<?xml version="1.0" encoding="UTF-8"?>
@@ -474,11 +535,15 @@ const App = () => {
                    }} />
                 </label>
              </div>
+          <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
+             <button onClick={() => setLang('mk')} className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition ${lang === 'mk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>MK</button>
+             <button onClick={() => setLang('sq')} className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition ${lang === 'sq' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>AL</button>
+          </div>
           <button onClick={saveCurrentTest} disabled={isSaving} className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${isSaving ? 'bg-slate-100 text-slate-400' : 'bg-white border border-indigo-200 text-indigo-600 shadow-lg shadow-indigo-50 hover:bg-indigo-50'}`}>
-            <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} /> {isSaving ? 'Зачувувам...' : 'Зачувај Тест'}
+            <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} /> {isSaving ? t('saving') : t('saveTest')}
           </button>
-          <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> Печати</button>
-          <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? 'Преглед' : 'Поставки'}</button>
+          <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> {t('print')}</button>
+          <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? t('preview') : t('editor')}</button>
         </div>
       </nav>
 
@@ -488,7 +553,7 @@ const App = () => {
           <div className="space-y-10">
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plus size={12} /> Блокови за задачи</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plus size={12} /> {t('toolbox')}</h3>
                 {testInfo.subject.length > 5 && (
                   <div className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase animate-pulse">Smart: {testInfo.subject.split(' ')[0]}</div>
                 )}
@@ -498,7 +563,7 @@ const App = () => {
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                  <input 
                   type="text" 
-                  placeholder="Пребарај формат..." 
+                  placeholder={t('searchFormat')} 
                   value={typeSearch}
                   onChange={e => setTypeSearch(e.target.value)}
                   className="w-full bg-slate-100 border-none rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
@@ -658,16 +723,16 @@ const App = () => {
                    </div>
                    <div className="text-right flex flex-col items-end">
                       <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl flex items-center gap-3 shadow-xl">
-                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Одд.</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{t('grade')}</span>
                          <input className="bg-transparent text-xl font-black w-10 text-center outline-none" value={testInfo.grade} onChange={e => setTestInfo({...testInfo, grade: e.target.value})} />
                       </div>
-                      <span className="text-[10px] font-black text-slate-300 block mt-4 uppercase tracking-widest">Датум: {testInfo.date}</span>
+                      <span className="text-[10px] font-black text-slate-300 block mt-4 uppercase tracking-widest">{t('date')}: {testInfo.date}</span>
                    </div>
                 </div>
                 {view !== 'answerKey' && view !== 'answerSheet' && (
                   <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
-                    <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Ученик:</div>
-                    <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right">Поени: _____ / {totalPoints}</div>
+                    <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">{t('student')}:</div>
+                    <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right">{t('points')}: _____ / {totalPoints}</div>
                   </div>
                 )}
              </header>
@@ -775,7 +840,7 @@ const App = () => {
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{testInfo.schoolType} {testInfo.school} • v6.0 Pro</p>
                 <div className="text-center w-80">
                    <div className="border-b-4 border-slate-900 mb-4 h-16" />
-                   <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">Потпис на Наставник</p>
+                   <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">{t('teacherSignature')}</p>
                 </div>
              </footer>
           </div>
