@@ -12,6 +12,9 @@ const STEMHelper = ({ onInsert }) => (
       { label: 'π', cmd: '$\\pi$' },
       { label: '·', cmd: '$\\cdot$' },
       { label: '±', cmd: '$\\pm$' },
+      { label: '°', cmd: '$\\degree$' },
+      { label: 'θ', cmd: '$\\theta$' },
+      { label: '∠', cmd: '$\\angle$' },
       { label: '∞', cmd: '$\\infty$' },
       { label: '≤', cmd: '$\\le$' },
       { label: '≥', cmd: '$\\ge$' }
