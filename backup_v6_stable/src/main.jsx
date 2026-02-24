@@ -355,8 +355,8 @@ const App = () => {
           ))}
         </div>
         <div id="action-buttons" className={`flex items-center gap-3 transition-all duration-500 ${showTutorial && tutorialStep === 5 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1' : ''}`}>
-          <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
-             <button title="Извези QTI (XML)" onClick={() => {
+          <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden">
+             <button onClick={() => {
                 const qti = `<?xml version="1.0" encoding="UTF-8"?>
 <assessmentTest xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" title="${testInfo.subject}">
   ${questions.map(q => `
@@ -370,40 +370,9 @@ const App = () => {
                 a.href = url;
                 a.download = 'test-qti.xml';
                 a.click();
-             }} className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"><Share2 size={12} /> QTI</button>
-             
-             <button title="Увези JSON / AI Тест" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition relative flex items-center gap-1">
-                <Cloud size={12} /> JSON
-                <input type="file" accept=".json" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    try {
-                      const data = JSON.parse(ev.target.result);
-                      const newQs = data.map((q, i) => ({
-                        id: Date.now() + i,
-                        type: q.type || 'multiple',
-                        text: q.text || '',
-                        options: q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
-                        correct: q.correct ?? 0,
-                        points: q.points || 5,
-                        difficulty: q.difficulty || 'medium',
-                        columns: q.columns || 2,
-                        matches: q.matches || undefined,
-                        tableData: q.tableData || undefined
-                      }));
-                      setQuestions([...questions, ...newQs]);
-                    } catch (err) {
-                      alert("Грешка при читање на JSON фајлот.");
-                    }
-                  };
-                  reader.readAsText(file);
-                }} />
-             </button>
-
-             <label title="Увези QTI (XML)" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition cursor-pointer flex items-center gap-1">
-                <History size={12} /> Увоз QTI
+             }} className="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-indigo-600 flex items-center gap-1"><Share2 size={12} /> Export QTI</button>
+             <label className="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer">
+                <Cloud size={12} /> Import QTI
                 <input type="file" className="hidden" accept=".xml" onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
