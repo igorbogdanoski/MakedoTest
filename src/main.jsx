@@ -39,6 +39,8 @@ const App = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [questionBank, setQuestionBank] = useState([]);
+  const [myTests, setMyTests] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [duplicateAlert, setDuplicateAlert] = useState(null);
   const [showHelp, setShowHelp] = useState(null);
@@ -247,7 +249,10 @@ const App = () => {
     const unsubBank = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'question_bank'), (s) => {
       setQuestionBank(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => unsubBank();
+    const unsubTests = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests'), (s) => {
+      setMyTests(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => { unsubBank(); unsubTests(); };
   }, [user]);
 
   useEffect(() => {
@@ -288,6 +293,24 @@ const App = () => {
     await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'question_bank'), { ...q });
     setDuplicateAlert("Додадено во банката!");
     setTimeout(() => setDuplicateAlert(null), 2000);
+  };
+
+  const saveCurrentTest = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests'), {
+        testInfo,
+        questions,
+        createdAt: new Date().toISOString()
+      });
+      setDuplicateAlert("Тестот е зачуван во Вашиот облак!");
+    } catch (err) {
+      alert("Грешка при зачувување.");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setDuplicateAlert(null), 2000);
+    }
   };
 
   const randomizeQuestions = () => {
@@ -436,6 +459,9 @@ const App = () => {
                    }} />
                 </label>
              </div>
+          <button onClick={saveCurrentTest} disabled={isSaving} className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${isSaving ? 'bg-slate-100 text-slate-400' : 'bg-white border border-indigo-200 text-indigo-600 shadow-lg shadow-indigo-50 hover:bg-indigo-50'}`}>
+            <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} /> {isSaving ? 'Зачувувам...' : 'Зачувај Тест'}
+          </button>
           <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> Печати</button>
           <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? 'Преглед' : 'Поставки'}</button>
         </div>
@@ -527,12 +553,27 @@ const App = () => {
 
             <div id="bank-tab" className={`transition-all duration-500 ${showTutorial && tutorialStep === 1 ? 'ring-4 ring-indigo-500 bg-indigo-50 p-4 rounded-3xl' : ''}`}>
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><History size={12} /> Банка ({questionBank.length})</h3>
-               <div className="space-y-3">
+               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {questionBank.map(bq => (
                     <div key={bq.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative group cursor-pointer hover:bg-white hover:border-indigo-100 transition shadow-sm" onClick={() => setQuestions([...questions, {...bq, id: Date.now()}])}>
                        <p className="text-[10px] font-bold text-slate-500 line-clamp-2 leading-relaxed"><RenderContent text={bq.text} /></p>
                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1">
                           <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'question_bank', bq.id)); }} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"><Trash2 size={12} /></button>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            <div id="tests-tab" className="mt-10">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><BookOpen size={12} /> Мои Тестови ({myTests.length})</h3>
+               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {myTests.map(t => (
+                    <div key={t.id} className="p-4 bg-white rounded-2xl border border-slate-100 relative group cursor-pointer hover:border-indigo-100 transition shadow-sm" onClick={() => { if(window.confirm('Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.')) { setQuestions(t.questions); setTestInfo(t.testInfo); } }}>
+                       <p className="text-[10px] font-black text-slate-900 line-clamp-1 uppercase">{t.testInfo.subject}</p>
+                       <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">{t.testInfo.grade} одделение • {t.questions.length} прашања</p>
+                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Избриши тест?')) deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'my_tests', t.id)); }} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"><Trash2 size={12} /></button>
                        </div>
                     </div>
                   ))}
