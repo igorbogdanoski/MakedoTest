@@ -168,23 +168,31 @@ const App = () => {
   }, [questions]);
 
   const questionTypes = [
-    { id: 'multiple', label: 'Понудени одговори', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'] },
-    { id: 'true-false', label: 'Точно/Неточно', icon: <HelpCircle size={16} />, cat: 'базични', subjects: ['all'] },
-    { id: 'fill-blanks', label: 'Пополни празнини', icon: <Minus size={16} />, cat: 'текстуални', subjects: ['languages', 'history'] },
-    { id: 'selection', label: 'Селекција (Инлајн)', icon: <CircleDot size={16} />, cat: 'напредни', subjects: ['languages'] },
-    { id: 'multi-match', label: 'Мулти-поврзување', icon: <Grid3X3 size={16} />, cat: 'логички', subjects: ['stem', 'all'] },
-    { id: 'short-answer', label: 'Краток одговор', icon: <Type size={16} />, cat: 'текстуални', subjects: ['all'] },
-    { id: 'essay', label: 'Есеј / Долг одговор', icon: <FileText size={16} />, cat: 'текстуални', subjects: ['languages', 'history'] },
-    { id: 'matching', label: 'Поврзување', icon: <Split size={16} />, cat: 'логички', subjects: ['all'] },
-    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички', subjects: ['history', 'stem'] },
-    { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа', subjects: ['all'] },
-    { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни', subjects: ['stem'] },
-    { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни', subjects: ['stem'] },
-    { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни', subjects: ['all'] },
-    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни', subjects: ['stem', 'geography'] },
-    { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични', subjects: ['all'] },
-    { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'] },
+    { id: 'multiple', label: 'Понудени одговори', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'], priority: 10 },
+    { id: 'true-false', label: 'Точно/Неточно', icon: <HelpCircle size={16} />, cat: 'базични', subjects: ['all'], priority: 9 },
+    { id: 'fill-blanks', label: 'Пополни празнини', icon: <Minus size={16} />, cat: 'текстуални', subjects: ['languages', 'history'], priority: 8 },
+    { id: 'selection', label: 'Селекција (Инлајн)', icon: <CircleDot size={16} />, cat: 'напредни', subjects: ['languages'], priority: 7 },
+    { id: 'multi-match', label: 'Мулти-поврзување', icon: <Grid3X3 size={16} />, cat: 'логички', subjects: ['stem', 'all'], priority: 6 },
+    { id: 'short-answer', label: 'Краток одговор', icon: <Type size={16} />, cat: 'текстуални', subjects: ['all'], priority: 10 },
+    { id: 'essay', label: 'Есеј / Долг одговор', icon: <FileText size={16} />, cat: 'текстуални', subjects: ['languages', 'history'], priority: 5 },
+    { id: 'matching', label: 'Поврзување', icon: <Split size={16} />, cat: 'логички', subjects: ['all'], priority: 8 },
+    { id: 'ordering', label: 'Подредување', icon: <ListOrdered size={16} />, cat: 'логички', subjects: ['history', 'stem'], priority: 7 },
+    { id: 'list', label: 'Листа (набројување)', icon: <ListIcon size={16} />, cat: 'листа', subjects: ['all'], priority: 6 },
+    { id: 'table', label: 'Табела', icon: <TableIcon size={16} />, cat: 'напредни', subjects: ['stem'], priority: 9 },
+    { id: 'multi-part', label: 'Мулти-дел (а, б, в)', icon: <Layers size={16} />, cat: 'напредни', subjects: ['stem'], priority: 8 },
+    { id: 'section', label: 'Наслов на Секција', icon: <AlignJustify size={16} />, cat: 'напредни', subjects: ['all'], priority: 5 },
+    { id: 'diagram', label: 'Дијаграм / Цртеж', icon: <ImageIcon size={16} />, cat: 'напредни', subjects: ['stem', 'geography'], priority: 7 },
+    { id: 'statements', label: 'Изјави (Т/Н листа)', icon: <CheckCircle2 size={16} />, cat: 'базични', subjects: ['all'], priority: 8 },
+    { id: 'checklist', label: 'Повеќекратен избор', icon: <CheckSquare size={16} />, cat: 'базични', subjects: ['all'], priority: 7 },
   ];
+
+  const categoryIcons = {
+    'базични': <Zap size={14} className="text-amber-500" />,
+    'текстуални': <Type size={14} className="text-blue-500" />,
+    'логички': <Shuffle size={14} className="text-purple-500" />,
+    'листа': <ListOrdered size={14} className="text-emerald-500" />,
+    'напредни': <Sparkles size={14} className="text-indigo-500" />
+  };
 
   const categories = [
     { id: 'all', label: 'Сите' },
@@ -210,15 +218,15 @@ const App = () => {
     const isLang = subj.includes('мак') || subj.includes('анг') || subj.includes('јаз');
 
     types.sort((a, b) => {
-      if (isSTEM) {
-        if (a.subjects.includes('stem') && !b.subjects.includes('stem')) return -1;
-        if (!a.subjects.includes('stem') && b.subjects.includes('stem')) return 1;
-      }
-      if (isLang) {
-        if (a.subjects.includes('languages') && !b.subjects.includes('languages')) return -1;
-        if (!a.subjects.includes('languages') && b.subjects.includes('languages')) return 1;
-      }
-      return 0;
+      // 1. Subject relevance
+      const aRel = (isSTEM && a.subjects.includes('stem')) || (isLang && a.subjects.includes('languages'));
+      const bRel = (isSTEM && b.subjects.includes('stem')) || (isLang && b.subjects.includes('languages'));
+      
+      if (aRel && !bRel) return -1;
+      if (!aRel && bRel) return 1;
+      
+      // 2. Priority
+      return (b.priority || 0) - (a.priority || 0);
     });
 
     // 3. Category Filter
@@ -280,7 +288,7 @@ const App = () => {
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
     else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3, data: {} }; }
     else if (type === 'selection') { baseQ.text = "Пример за {точен|погрешно}."; }
-    else if (type === 'section') { baseQ.points = 0; baseQ.fullWidth = true; baseQ.text = "НОВА СЕКЦИЈА"; }
+    else if (type === 'section') { baseQ.points = 0; baseQ.fullWidth = true; baseQ.text = "НОВА СЕКЦИЈА"; baseQ.sectionLayout = testInfo.layout; }
     else if (type === 'list' || type === 'ordering') { baseQ.items = ['', '', '']; }
     else if (type === 'statements') { baseQ.items = [{s: '', correct: 0}, {s: '', correct: 0}]; }
     else if (type === 'multi-part') { baseQ.parts = ['', '']; }
@@ -338,7 +346,14 @@ const App = () => {
     setQuestions(newQs);
   };
 
-  if (view === 'landing') return <LandingPage setView={setView} setShowTutorial={setShowTutorial} setTutorialStep={setTutorialStep} demoStep={demoStep} />;
+  const handleStart = (subject) => {
+    if (subject) {
+      setTestInfo(prev => ({ ...prev, subject }));
+    }
+    setView('editor');
+  };
+
+  if (view === 'landing') return <LandingPage setView={setView} onStart={handleStart} setShowTutorial={setShowTutorial} setTutorialStep={setTutorialStep} demoStep={demoStep} />;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 relative overflow-x-hidden">
@@ -502,25 +517,32 @@ const App = () => {
                 ))}
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {['базични', 'текстуални', 'логички', 'листа', 'напредни'].map(category => {
                   const items = filteredTypes.filter(t => t.cat === category);
                   if (items.length === 0) return null;
                   return (
-                    <div key={category} className="space-y-4">
-                      <h4 className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] border-l-2 border-indigo-500 pl-3">{category}</h4>
+                    <div key={category} className="space-y-5 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100/50">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                          {categoryIcons[category]}
+                        </div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{category}</h4>
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         {items.map(type => (
                           <button 
                             key={type.id} 
                             onClick={() => addQuestion(type.id)} 
-                            className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-center shadow-sm relative overflow-hidden"
+                            className="flex flex-col items-center gap-3 p-4 rounded-[2rem] border border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group text-center shadow-sm hover:shadow-md relative overflow-hidden active:scale-95"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
                               {type.icon}
                             </div>
-                            <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tighter">{type.label}</span>
-                            {type.subjects.includes('stem') && <div className="absolute top-1 right-1 w-1 h-1 bg-indigo-400 rounded-full" />}
+                            <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tight">{type.label}</span>
+                            {(type.subjects.includes('stem') || type.subjects.includes('languages')) && (
+                              <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${type.subjects.includes('stem') ? 'bg-indigo-400' : 'bg-blue-400'}`} />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -650,7 +672,7 @@ const App = () => {
                 )}
              </header>
 
-             <div className={`relative z-10 flex-grow ${testInfo.layout === 'double' && view !== 'answerSheet' ? 'grid grid-cols-2 gap-x-12 gap-y-20' : 'space-y-20'}`}>
+             <div className={`relative z-10 flex-grow ${view === 'answerSheet' ? 'space-y-20' : ''}`}>
                {view === 'answerSheet' ? (
                  <div className="grid grid-cols-2 gap-10">
                    {questions.map((q, idx) => (
@@ -671,25 +693,68 @@ const App = () => {
                    ))}
                  </div>
                ) : (
-                 questions.map((q, idx) => (
-                   <div key={q.id} className={testInfo.layout === 'double' && q.fullWidth ? 'col-span-2' : ''}>
-                     <Question 
-                       q={q} 
-                       idx={idx} 
-                       view={view} 
-                       testInfo={testInfo} 
-                       questions={questions}
-                       setQuestions={setQuestions}
-                       saveToBank={saveToBank}
-                       showHelp={showHelp}
-                       setShowHelp={setShowHelp}
-                       helpContent={helpContent}
-                       randomizeAnswers={randomizeAnswers}
-                       duplicates={duplicates}
-                       moveQuestion={moveQuestion}
-                     />
-                   </div>
-                 ))
+                 (() => {
+                    const sections = [];
+                    let currentSection = { layout: testInfo.layout, questions: [] };
+                    
+                    questions.forEach((q, idx) => {
+                      if (q.type === 'section') {
+                        if (currentSection.questions.length > 0) sections.push(currentSection);
+                        sections.push({ isHeader: true, q, idx });
+                        currentSection = { layout: q.sectionLayout || testInfo.layout, questions: [] };
+                      } else {
+                        currentSection.questions.push({ q, idx });
+                      }
+                    });
+                    sections.push(currentSection);
+
+                    return sections.map((s, sIdx) => {
+                      if (s.isHeader) {
+                        return (
+                          <div key={s.q.id}>
+                            <Question 
+                              q={s.q} 
+                              idx={s.idx} 
+                              view={view} 
+                              testInfo={testInfo} 
+                              questions={questions}
+                              setQuestions={setQuestions}
+                              saveToBank={saveToBank}
+                              showHelp={showHelp}
+                              setShowHelp={setShowHelp}
+                              helpContent={helpContent}
+                              randomizeAnswers={randomizeAnswers}
+                              duplicates={duplicates}
+                              moveQuestion={moveQuestion}
+                            />
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={sIdx} className={`grid gap-x-12 gap-y-20 ${s.layout === 'double' ? 'grid-cols-2 mt-20' : 'grid-cols-1 mt-20'}`}>
+                          {s.questions.map(({ q, idx }) => (
+                            <div key={q.id} className={s.layout === 'double' && q.fullWidth ? 'col-span-2' : ''}>
+                              <Question 
+                                q={q} 
+                                idx={idx} 
+                                view={view} 
+                                testInfo={testInfo} 
+                                questions={questions}
+                                setQuestions={setQuestions}
+                                saveToBank={saveToBank}
+                                showHelp={showHelp}
+                                setShowHelp={setShowHelp}
+                                helpContent={helpContent}
+                                randomizeAnswers={randomizeAnswers}
+                                duplicates={duplicates}
+                                moveQuestion={moveQuestion}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    });
+                 })()
                )}
              </div>
 

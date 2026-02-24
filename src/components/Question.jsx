@@ -42,12 +42,19 @@ const Question = ({
 
   if (q.type === 'section') {
     return (
-      <div className={`relative group py-12 border-b-4 border-slate-900 mb-10 ${testInfo.layout === 'double' ? 'col-span-2' : ''}`}>
+      <div className={`relative group py-12 border-b-4 border-slate-900 mb-10 col-span-2`}>
         {view === 'editor' && (
           <div className="absolute -left-16 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition print:hidden z-20">
             <button onClick={() => setQuestions(questions.filter(qu => qu.id !== q.id))} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition shadow-sm"><Trash2 size={16} /></button>
             <button onClick={() => moveQuestion(idx, -1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronUp size={16} /></button>
             <button onClick={() => moveQuestion(idx, 1)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition shadow-sm"><ChevronDown size={16} /></button>
+            <button 
+              onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, sectionLayout: qu.sectionLayout === 'double' ? 'single' : 'double'} : qu))} 
+              className={`p-2.5 rounded-xl transition shadow-sm ${q.sectionLayout === 'double' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} 
+              title="Распоред на секција"
+            >
+              <Layout size={16} />
+            </button>
           </div>
         )}
         {view === 'editor' ? (

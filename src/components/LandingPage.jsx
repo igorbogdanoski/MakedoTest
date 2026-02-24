@@ -1,8 +1,8 @@
 import React from 'react';
-import { Zap, Sparkles, Play, ArrowRight } from 'lucide-react';
+import { Zap, Sparkles, Play, ArrowRight, Sigma, Beaker, Type, Globe, School } from 'lucide-react';
 import RenderContent from './RenderContent';
 
-const LandingPage = ({ setView, setShowTutorial, setTutorialStep, demoStep }) => (
+const LandingPage = ({ setView, onStart, setShowTutorial, setTutorialStep, demoStep }) => (
   <div className="min-h-screen bg-white relative overflow-hidden font-sans">
     <nav className="px-8 py-6 flex justify-between items-center max-w-7xl mx-auto relative z-10">
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
@@ -30,9 +30,32 @@ const LandingPage = ({ setView, setShowTutorial, setTutorialStep, demoStep }) =>
            </div>
         </div>
         <p className="text-xl text-slate-500 leading-relaxed max-w-md font-medium">Најнапредниот софтвер за наставници во Македонија. Подготвен за печатење на А4.</p>
-        <div className="flex gap-6">
-          <button onClick={() => setView('editor')} className="bg-indigo-600 text-white px-10 py-5 rounded-3xl font-black shadow-2xl flex items-center gap-3 hover:bg-indigo-700 transition active:scale-95 text-lg">Креирај нов тест <ArrowRight size={22} /></button>
-          <button onClick={() => { setView('editor'); setShowTutorial(true); setTutorialStep(0); }} className="bg-white border-2 border-slate-100 px-10 py-5 rounded-3xl font-black flex items-center gap-3 hover:border-indigo-100 transition text-lg"><Play size={22} /> Види како работи</button>
+        <div className="flex flex-col gap-6">
+          <div className="flex gap-6">
+            <button onClick={() => onStart()} className="bg-indigo-600 text-white px-10 py-5 rounded-3xl font-black shadow-2xl flex items-center gap-3 hover:bg-indigo-700 transition active:scale-95 text-lg">Брз почеток <ArrowRight size={22} /></button>
+            <button onClick={() => { onStart(); setShowTutorial(true); setTutorialStep(0); }} className="bg-white border-2 border-slate-100 px-10 py-5 rounded-3xl font-black flex items-center gap-3 hover:border-indigo-100 transition text-lg"><Play size={22} /> Види како работи</button>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            {[
+              { id: 'math', label: 'Математика', icon: <Sigma size={16} />, color: 'bg-amber-500' },
+              { id: 'science', label: 'Природни Науки', icon: <Beaker size={16} />, color: 'bg-emerald-500' },
+              { id: 'lang', label: 'Македонски јазик', icon: <Type size={16} />, color: 'bg-blue-500' },
+              { id: 'eng', label: 'Англиски јазик', icon: <Globe size={16} />, color: 'bg-indigo-500' },
+              { id: 'hist', label: 'Историја', icon: <School size={16} />, color: 'bg-red-500' }
+            ].map(subj => (
+              <button 
+                key={subj.id}
+                onClick={() => {
+                  onStart(subj.label);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-white border border-slate-100 hover:border-indigo-200 rounded-xl transition text-[10px] font-black uppercase tracking-wider text-slate-600 group"
+              >
+                <div className={`${subj.color} p-1.5 rounded-lg text-white transition group-hover:scale-110`}>{subj.icon}</div>
+                {subj.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
