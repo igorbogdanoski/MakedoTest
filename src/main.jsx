@@ -134,7 +134,7 @@ const App = () => {
   const [questions, setQuestions] = useState([
     {
       id: 1, type: 'multiple', text: 'Пресметај ја плоштината на круг со радиус $r = 5cm$ ако $\\pi \\approx 3.14$?',
-      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 3, points: 5, subNum: "", difficulty: 'medium'
+      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 2, points: 5, subNum: "", difficulty: 'medium'
     }
   ]);
 
@@ -267,7 +267,7 @@ const App = () => {
   };
 
   const addQuestion = (type) => {
-    const baseQ = { id: Date.now(), type, text: '', points: 5, columns: 1, difficulty: 'medium' };
+    const baseQ = { id: Date.now(), type, text: '', points: 5, columns: (type === 'multiple' || type === 'checklist' ? 2 : 1), difficulty: 'medium' };
     if (type === 'multiple' || type === 'checklist') { baseQ.options = ['', '', '']; baseQ.correct = 0; baseQ.corrects = []; }
     else if (type === 'true-false') { baseQ.correct = 0; baseQ.layout = 'horizontal'; }
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }

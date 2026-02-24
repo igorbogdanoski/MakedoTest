@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma } from 'lucide-react';
+import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma, Layout } from 'lucide-react';
 import RenderContent from './RenderContent';
 
 const STEMHelper = ({ onInsert }) => (
@@ -96,7 +96,10 @@ const Question = ({
             <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, fullWidth: !qu.fullWidth} : qu))} className={`p-2.5 rounded-xl transition shadow-sm ${q.fullWidth ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} title="Цела ширина"><MoveVertical size={16} className="rotate-90" /></button>
           )}
           {(q.type === 'multiple' || q.type === 'checklist') && (
-            <button onClick={() => randomizeAnswers(q.id)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition shadow-sm" title="Измешај одговори"><Shuffle size={16} /></button>
+            <>
+              <button onClick={() => randomizeAnswers(q.id)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition shadow-sm" title="Измешај одговори"><Shuffle size={16} /></button>
+              <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, columns: qu.columns === 2 ? 1 : 2} : qu))} className={`p-2.5 rounded-xl transition shadow-sm ${q.columns === 2 ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} title="Колони (1 или 2)"><Layout size={16} /></button>
+            </>
           )}
           <div className="bg-white p-2 rounded-xl border flex flex-col items-center shadow-sm">
             <span className="text-[8px] font-black text-slate-400 uppercase">Бод</span>
@@ -221,7 +224,7 @@ const Question = ({
       </div>
       <div className="ml-16 font-sans">
         {(q.type === 'multiple' || q.type === 'checklist') && (
-          <div className={`grid gap-6 grid-cols-${q.columns || 1} w-full`}>
+          <div className={`grid gap-6 ${q.columns === 2 ? 'grid-cols-2' : 'grid-cols-1'} w-full`}>
             {q.options.map((opt, oIdx) => (
               <div key={oIdx} className={`flex flex-col gap-2 rounded-3xl border-2 transition p-4 ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'border-slate-50 bg-slate-50/20'}`}>
                 <div className="flex items-center gap-4">
