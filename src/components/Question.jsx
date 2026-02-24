@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma, Layout } from 'lucide-react';
+import { Trash2, Save, AlertCircle, Shuffle, CheckCircle2, CheckSquare, Plus, ArrowRight, MoveVertical, Check, X, Sparkles, Flame, Globe, ChevronUp, ChevronDown, Sigma, Layout, Grid3X3, Image as ImageIcon } from 'lucide-react';
 import RenderContent from './RenderContent';
 
 const STEMHelper = ({ onInsert }) => (
@@ -31,6 +31,28 @@ const STEMHelper = ({ onInsert }) => (
     <div className="w-px bg-slate-200 mx-2" />
     <div className="flex items-center gap-3 text-xs font-black text-indigo-400 uppercase px-4 bg-indigo-50/50 rounded-2xl border-2 border-indigo-100/50"><Sigma size={20} className="text-indigo-600" /> STEM TOOLBAR</div>
   </div>
+);
+
+const CoordinateSystem = () => (
+  <svg viewBox="0 0 200 200" className="w-full h-full bg-white">
+    {/* Grid lines */}
+    {[...Array(21)].map((_, i) => (
+      <React.Fragment key={i}>
+        <line x1={i * 10} y1="0" x2={i * 10} y2="200" stroke="#f1f5f9" strokeWidth="0.5" />
+        <line x1="0" y1={i * 10} x2="200" y2={i * 10} stroke="#f1f5f9" strokeWidth="0.5" />
+      </React.Fragment>
+    ))}
+    {/* Axes */}
+    <line x1="100" y1="0" x2="100" y2="200" stroke="#94a3b8" strokeWidth="1" />
+    <line x1="0" y1="100" x2="200" y2="100" stroke="#94a3b8" strokeWidth="1" />
+    {/* Arrows */}
+    <path d="M100 0 L97 7 L103 7 Z" fill="#94a3b8" />
+    <path d="M200 100 L193 97 L193 103 Z" fill="#94a3b8" />
+    {/* Labels */}
+    <text x="105" y="10" className="text-[8px] font-black fill-slate-400">y</text>
+    <text x="190" y="95" className="text-[8px] font-black fill-slate-400">x</text>
+    <text x="102" y="108" className="text-[6px] font-black fill-slate-300">0</text>
+  </svg>
 );
 
 const Question = ({ 
@@ -101,6 +123,13 @@ const Question = ({
             title="Тежина"
           >
             <Flame size={16} fill={q.difficulty === 'hard' ? 'currentColor' : 'none'} />
+          </button>
+          <button 
+            onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, showImage: !qu.showImage} : qu))} 
+            className={`p-2.5 rounded-xl transition shadow-sm ${q.showImage ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} 
+            title="Додај слика"
+          >
+            <ImageIcon size={16} />
           </button>
           {testInfo.layout === 'double' && (
             <button onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, fullWidth: !qu.fullWidth} : qu))} className={`p-2.5 rounded-xl transition shadow-sm ${q.fullWidth ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white'}`} title="Цела ширина"><MoveVertical size={16} className="rotate-90" /></button>
@@ -218,6 +247,20 @@ const Question = ({
                   className="flex-1 bg-transparent text-xs font-bold outline-none text-slate-600"
                 />
               </div>
+              {q.showImage && (
+                <div className="flex flex-col gap-3 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
+                   <div className="flex items-center gap-3">
+                      <ImageIcon size={14} className="text-indigo-600" />
+                      <input 
+                        placeholder="Линк до слика (URL)..." 
+                        value={q.imageUrl || ''} 
+                        onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, imageUrl: e.target.value} : qu))}
+                        className="flex-1 bg-transparent text-xs font-bold outline-none text-indigo-900"
+                      />
+                   </div>
+                   {q.imageUrl && <img src={q.imageUrl} alt="Preview" className="w-40 h-auto rounded-xl border-2 border-white shadow-sm" />}
+                </div>
+              )}
               {q.type === 'selection' && (
                 <div className="flex gap-2 p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100">
                   <AlertCircle size={14} className="text-indigo-400 mt-0.5" />
@@ -227,6 +270,11 @@ const Question = ({
             </div>
           ) : (
             <div className={`text-lg font-bold text-slate-800 leading-relaxed pr-10 ${testInfo.alignment === 'justify' ? 'text-justify' : ''}`}>
+              {q.imageUrl && q.type !== 'diagram' && (
+                <div className="mb-6 rounded-[2rem] overflow-hidden border-4 border-slate-900 shadow-xl max-w-xl">
+                   <img src={q.imageUrl} alt="Task Image" className="w-full h-auto" />
+                </div>
+              )}
               <RenderContent text={q.text} view={view} />
             </div>
           )}
@@ -571,11 +619,24 @@ const Question = ({
         {q.type === 'diagram' && (
           <div className="space-y-4">
             {view === 'editor' ? (
-              <input placeholder="Линк до слика на дијаграм..." value={q.imageUrl || ''} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, imageUrl: e.target.value} : qu))} className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 font-bold" />
+              <div className="flex gap-4">
+                <input placeholder="Линк до слика на дијаграм..." value={q.imageUrl || ''} onChange={e => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, imageUrl: e.target.value} : qu))} className="flex-1 bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 font-bold" />
+                <button 
+                  onClick={() => setQuestions(questions.map(qu => qu.id === q.id ? {...qu, showGrid: !qu.showGrid} : qu))}
+                  className={`px-6 rounded-2xl font-black text-[10px] uppercase transition ${q.showGrid ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                >
+                  <Grid3X3 size={16} className="mb-1 mx-auto" /> Коорд. систем
+                </button>
+              </div>
             ) : null}
-            {q.imageUrl && (
-              <div className="relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-slate-100">
-                <img src={q.imageUrl} alt="Diagram" className="w-full h-auto" />
+            {(q.imageUrl || q.showGrid) && (
+              <div className="relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-white shadow-xl max-w-2xl mx-auto aspect-square flex items-center justify-center">
+                {q.showGrid && (
+                  <div className="absolute inset-0">
+                    <CoordinateSystem />
+                  </div>
+                )}
+                {q.imageUrl && <img src={q.imageUrl} alt="Diagram" className="relative z-10 max-w-full max-h-full object-contain mix-blend-multiply" />}
               </div>
             )}
             <div className="space-y-4 mt-6">

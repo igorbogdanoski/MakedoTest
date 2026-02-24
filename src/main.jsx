@@ -179,10 +179,10 @@ const App = () => {
       tip: 'Можете да доделите посебни бодови за секој дел.'
     },
     'diagram': {
-      desc: 'Визуелна задача каде се бара означување на слика.',
-      use: 'За анатомија, географија (карти) или технички шеми.',
-      example: 'Означи ги деловите на цветот на дадената слика.',
-      tip: 'Поставете ја сликата во едиторот и користете го просторот под неа за прашања.'
+      desc: 'Визуелна задача каде се бара означување на слика, дијаграм или геометриско тело.',
+      use: 'За анатомија, географија (карти), физика или стереометрија (3D тела).',
+      example: 'Означи ги темената на дадениот конус.',
+      tip: 'Користете го „Координатниот систем“ за задачи по аналитичка геометрија.'
     }
   };
 
@@ -196,7 +196,7 @@ const App = () => {
   const [questions, setQuestions] = useState([
     {
       id: 1, type: 'multiple', text: 'Пресметај ја плоштината на круг со радиус $r = 5cm$ ако $\\pi \\approx 3.14$?',
-      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 2, points: 5, subNum: "", difficulty: 'medium'
+      options: ['$78.5cm^2$', '$31.4cm^2$', '$25cm^2$'], correct: 0, columns: 2, points: 5, subNum: "", difficulty: 'medium', showImage: true, imageUrl: 'https://img.freepik.com/free-vector/math-concept-illustration_114360-3949.jpg'
     }
   ]);
 
@@ -837,7 +837,10 @@ const App = () => {
                 </div>
              )}
              <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{testInfo.schoolType} {testInfo.school} • v6.0 Pro</p>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{testInfo.schoolType} {testInfo.school} • v6.0 Pro</p>
+                  <p className="text-[8px] font-bold text-slate-300 uppercase mt-1">Автор: Игор Богданоски</p>
+                </div>
                 <div className="text-center w-80">
                    <div className="border-b-4 border-slate-900 mb-4 h-16" />
                    <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">{t('teacherSignature')}</p>
