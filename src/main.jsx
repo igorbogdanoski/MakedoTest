@@ -42,6 +42,8 @@ const App = () => {
   const [demoStep, setDemoStep] = useState(0);
   const [duplicateAlert, setDuplicateAlert] = useState(null);
   const [showHelp, setShowHelp] = useState(null);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteValue, setPasteValue] = useState('');
 
   const helpContent = {
     'multiple': {
@@ -272,8 +274,12 @@ const App = () => {
     else if (type === 'true-false') { baseQ.correct = 0; baseQ.layout = 'horizontal'; }
     else if (type === 'matching' || type === 'multi-match') { baseQ.matches = [{s:'', a:''}, {s:'', a:''}]; }
     else if (type === 'table') { baseQ.tableData = { rows: 3, cols: 3, data: {} }; }
-    else if (type === 'selection') { baseQ.text = "Пример за {избор|погрешно}."; }
+    else if (type === 'selection') { baseQ.text = "Пример за {точен|погрешно}."; }
     else if (type === 'section') { baseQ.points = 0; baseQ.fullWidth = true; baseQ.text = "НОВА СЕКЦИЈА"; }
+    else if (type === 'list' || type === 'ordering') { baseQ.items = ['', '', '']; }
+    else if (type === 'statements') { baseQ.items = [{s: '', correct: 0}, {s: '', correct: 0}]; }
+    else if (type === 'multi-part') { baseQ.parts = ['', '']; }
+    else if (type === 'diagram') { baseQ.imageUrl = ''; }
     setQuestions([...questions, baseQ]);
   };
 
@@ -355,77 +361,81 @@ const App = () => {
           ))}
         </div>
         <div id="action-buttons" className={`flex items-center gap-3 transition-all duration-500 ${showTutorial && tutorialStep === 5 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1' : ''}`}>
-          <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
-             <button title="Извези QTI (XML)" onClick={() => {
-                const qti = `<?xml version="1.0" encoding="UTF-8"?>
+             <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
+                <button title="Увези JSON / AI Тест" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition relative flex items-center gap-1">
+                   <Cloud size={12} /> JSON
+                   <input type="file" accept=".json" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
+                     const file = e.target.files[0];
+                     if (!file) return;
+                     const reader = new FileReader();
+                     reader.onload = (ev) => {
+                       try {
+                         const data = JSON.parse(ev.target.result);
+                         const newQs = data.map((q, i) => ({
+                           id: Date.now() + i,
+                           type: q.type || 'multiple',
+                           text: q.text || '',
+                           options: q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
+                           correct: q.correct ?? 0,
+                           points: q.points || 5,
+                           difficulty: q.difficulty || 'medium',
+                           columns: q.columns || 2,
+                           matches: q.matches || undefined,
+                           tableData: q.tableData || undefined
+                         }));
+                         setQuestions([...questions, ...newQs]);
+                       } catch (err) {
+                         alert("Грешка при читање на JSON фајлот.");
+                       }
+                     };
+                     reader.readAsText(file);
+                   }} />
+                </button>
+                <button onClick={() => setShowPasteModal(true)} title="Пастирај AI Код" className="px-3 py-2 rounded-xl text-slate-400 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1">
+                   <Sparkles size={12} />
+                </button>
+                <div className="w-px bg-slate-200 mx-1 self-stretch" />
+                <button title="Извези QTI (XML)" onClick={() => {
+                   const qti = `<?xml version="1.0" encoding="UTF-8"?>
 <assessmentTest xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" title="${testInfo.subject}">
   ${questions.map(q => `
   <assessmentItem identifier="${q.id}" title="${q.type}">
     <itemBody><p>${q.text}</p></itemBody>
   </assessmentItem>`).join('')}
 </assessmentTest>`;
-                const blob = new Blob([qti], {type: 'text/xml'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'test-qti.xml';
-                a.click();
-             }} className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"><Share2 size={12} /> QTI</button>
-             
-             <button title="Увези JSON / AI Тест" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition relative flex items-center gap-1">
-                <Cloud size={12} /> JSON
-                <input type="file" accept=".json" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    try {
-                      const data = JSON.parse(ev.target.result);
-                      const newQs = data.map((q, i) => ({
-                        id: Date.now() + i,
-                        type: q.type || 'multiple',
-                        text: q.text || '',
-                        options: q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
-                        correct: q.correct ?? 0,
-                        points: q.points || 5,
-                        difficulty: q.difficulty || 'medium',
-                        columns: q.columns || 2,
-                        matches: q.matches || undefined,
-                        tableData: q.tableData || undefined
-                      }));
-                      setQuestions([...questions, ...newQs]);
-                    } catch (err) {
-                      alert("Грешка при читање на JSON фајлот.");
-                    }
-                  };
-                  reader.readAsText(file);
-                }} />
-             </button>
-
-             <label title="Увези QTI (XML)" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition cursor-pointer flex items-center gap-1">
-                <History size={12} /> Увоз QTI
-                <input type="file" className="hidden" accept=".xml" onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
-                    const items = xmlDoc.getElementsByTagName("assessmentItem");
-                    const newQs = Array.from(items).map((item, i) => ({
-                      id: Date.now() + i,
-                      type: 'multiple',
-                      text: item.getElementsByTagName("p")[0]?.textContent || "Увезена задача",
-                      points: 5,
-                      options: ['', '', ''],
-                      correct: 0
-                    }));
-                    if (newQs.length > 0) setQuestions([...questions, ...newQs]);
-                  };
-                  reader.readAsText(file);
-                }} />
-             </label>
-          </div>
+                   const blob = new Blob([qti], {type: 'text/xml'});
+                   const url = URL.createObjectURL(blob);
+                   const a = document.createElement('a');
+                   a.href = url;
+                   a.download = 'test-qti.xml';
+                   a.click();
+                }} className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"><Share2 size={12} /> QTI</button>
+             </div>
+             <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
+                <label title="Увези QTI (XML)" className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition cursor-pointer flex items-center gap-1">
+                   <History size={12} /> Увоз QTI
+                   <input type="file" className="hidden" accept=".xml" onChange={(e) => {
+                     const file = e.target.files[0];
+                     if (!file) return;
+                     const reader = new FileReader();
+                     reader.onload = (ev) => {
+                       const parser = new DOMParser();
+                       const xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
+                       const items = xmlDoc.getElementsByTagName("assessmentItem");
+                       const newQs = Array.from(items).map((item, i) => ({
+                         id: Date.now() + i,
+                         type: 'multiple',
+                         text: item.getElementsByTagName("p")[0]?.textContent || "Увезена задача",
+                         points: 5,
+                         options: ['', '', ''],
+                         correct: 0
+                       }));
+                       if (newQs.length > 0) setQuestions([...questions, ...newQs]);
+                     };
+                     reader.readAsText(file);
+                   }} />
+                </label>
+             </div>
           <button onClick={handlePrint} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"><Printer size={16} /> Печати</button>
           <button onClick={() => setView(view === 'editor' ? 'preview' : 'editor')} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition">{view === 'editor' ? <Eye size={16} /> : <Settings size={16} />} {view === 'editor' ? 'Преглед' : 'Поставки'}</button>
         </div>
@@ -466,20 +476,31 @@ const App = () => {
                 ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {filteredTypes.map(type => (
-                  <button 
-                    key={type.id} 
-                    onClick={() => addQuestion(type.id)} 
-                    className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-center shadow-sm relative overflow-hidden"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">
-                      {type.icon}
+              <div className="space-y-8">
+                {['базични', 'текстуални', 'логички', 'листа', 'напредни'].map(category => {
+                  const items = filteredTypes.filter(t => t.cat === category);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={category} className="space-y-4">
+                      <h4 className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] border-l-2 border-indigo-500 pl-3">{category}</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {items.map(type => (
+                          <button 
+                            key={type.id} 
+                            onClick={() => addQuestion(type.id)} 
+                            className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition group text-center shadow-sm relative overflow-hidden"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm">
+                              {type.icon}
+                            </div>
+                            <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tighter">{type.label}</span>
+                            {type.subjects.includes('stem') && <div className="absolute top-1 right-1 w-1 h-1 bg-indigo-400 rounded-full" />}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tighter">{type.label}</span>
-                    {type.subjects.includes('stem') && <div className="absolute top-1 right-1 w-1 h-1 bg-indigo-400 rounded-full" />}
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -678,6 +699,58 @@ const App = () => {
       {duplicateAlert && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl animate-in slide-in-from-bottom-5 z-[200]">
           {duplicateAlert}
+        </div>
+      )}
+
+      {showPasteModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-6">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 animate-in zoom-in-95 duration-300">
+              <div className="flex justify-between items-start mb-8">
+                 <div className="flex items-center gap-4">
+                    <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg"><Sparkles size={24} /></div>
+                    <div>
+                       <h2 className="text-2xl font-black tracking-tighter text-slate-900 leading-none">Пастирај AI Тест</h2>
+                       <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Копирајте го JSON кодот од AI подолу</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setShowPasteModal(false)} className="text-slate-300 hover:text-slate-900 transition"><X size={24} /></button>
+              </div>
+              
+              <textarea 
+                value={pasteValue}
+                onChange={(e) => setPasteValue(e.target.value)}
+                placeholder='Пастирајте го JSON кодот тука... (пр. [ { "type": "multiple", ... } ])'
+                className="w-full h-80 bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6 outline-none focus:border-indigo-500 transition font-mono text-xs mb-8 resize-none shadow-inner"
+              />
+
+              <div className="flex gap-4">
+                 <button onClick={() => setShowPasteModal(false)} className="flex-1 py-5 rounded-[1.5rem] font-black text-slate-400 hover:bg-slate-50 transition uppercase tracking-widest text-xs">Откажи</button>
+                 <button onClick={() => {
+                    try {
+                      const data = JSON.parse(pasteValue);
+                      const newQs = data.map((q, i) => ({
+                        id: Date.now() + i,
+                        type: q.type || 'multiple',
+                        text: q.text || '',
+                        options: q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
+                        correct: q.correct ?? 0,
+                        points: q.points || 5,
+                        difficulty: q.difficulty || 'medium',
+                        columns: q.columns || 2,
+                        matches: q.matches || undefined,
+                        tableData: q.tableData || undefined
+                      }));
+                      setQuestions([...questions, ...newQs]);
+                      setShowPasteModal(false);
+                      setPasteValue('');
+                      setDuplicateAlert("Успешно увезени задачи!");
+                      setTimeout(() => setDuplicateAlert(null), 2000);
+                    } catch (err) {
+                      alert("Невалиден JSON формат. Ве молиме проверете го кодот.");
+                    }
+                 }} className="flex-[2] py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition uppercase tracking-widest text-xs">Увези задачи</button>
+              </div>
+           </div>
         </div>
       )}
     </div>

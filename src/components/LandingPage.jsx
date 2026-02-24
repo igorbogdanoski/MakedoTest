@@ -22,6 +22,13 @@ const LandingPage = ({ setView, setShowTutorial, setTutorialStep, demoStep }) =>
           <span className="text-xs font-black text-indigo-700 uppercase tracking-widest tracking-tighter">v6.0 Pro со СТЕМ поддршка</span>
         </div>
         <h1 className="text-7xl font-black text-slate-900 leading-[1.1] tracking-tighter text-balance">Креирајте <span className="text-indigo-600">професионални</span> тестови во минути.</h1>
+        <div className="flex items-center gap-3 py-2">
+           <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black">ИБ</div>
+           <div className="flex flex-col">
+              <span className="text-sm font-black text-slate-900 leading-tight">Игор Богданоски</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Главен архитект и EdTech експерт</span>
+           </div>
+        </div>
         <p className="text-xl text-slate-500 leading-relaxed max-w-md font-medium">Најнапредниот софтвер за наставници во Македонија. Подготвен за печатење на А4.</p>
         <div className="flex gap-6">
           <button onClick={() => setView('editor')} className="bg-indigo-600 text-white px-10 py-5 rounded-3xl font-black shadow-2xl flex items-center gap-3 hover:bg-indigo-700 transition active:scale-95 text-lg">Креирај нов тест <ArrowRight size={22} /></button>
