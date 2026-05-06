@@ -51,7 +51,7 @@
 - [x] **3.2** Bloom класификација (рачно/AI-assisted heuristic) → когнитивни извештаи (coverage + manual override + auto-suggest)
 - [x] **3.3** Cohort analysis: одделение во семестар (grade x semester breakdown + trend deltas)
 - [x] **3.4** PDF извештаи за родители + училишна администрација (print-ready parent/admin templates + export actions)
-- [ ] **3.5** Excel/Google Sheets извоз за е-дневници
+- [x] **3.5** Excel/Google Sheets извоз за е-дневници (CSV bundle + Google Sheets clipboard TSV)
 - [ ] **3.6** RAG quality dashboard: retrieval latency, citation coverage, hallucination sampling, teacher feedback loop
 
 ### Фаза 4 — Authoring 2.0 (паралелно со 2/3)

@@ -3,6 +3,7 @@ import { analyzeAttempts } from './itemAnalysis';
 import { BLOOM_LEVELS, inferBloomLevel, summarizeBloomCoverage } from './bloom';
 import { analyzeCohorts } from './cohortAnalysis';
 import { exportAdminPdfReport, exportParentPdfReport } from './pdfReports';
+import { copyEJournalForGoogleSheets, exportAnalyticsCsvBundle } from './spreadsheetExport';
 
 function fmt(n) {
   return Number.isFinite(n) ? n.toFixed(2) : '0.00';
@@ -77,6 +78,14 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
     });
   };
 
+  const handleExportExcel = () => {
+    exportAnalyticsCsvBundle({ attempts, questions });
+  };
+
+  const handleCopySheets = async () => {
+    await copyEJournalForGoogleSheets({ attempts, questions });
+  };
+
   if (!attempts.length) {
     return (
       <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -121,6 +130,20 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
           className="rounded-xl border border-violet-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-violet-700 transition hover:bg-violet-50"
         >
           PDF Admin Report
+        </button>
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          className="rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-700 transition hover:bg-emerald-50"
+        >
+          Excel CSV Export
+        </button>
+        <button
+          type="button"
+          onClick={handleCopySheets}
+          className="rounded-xl border border-amber-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-700 transition hover:bg-amber-50"
+        >
+          Copy for Google Sheets
         </button>
       </div>
 
