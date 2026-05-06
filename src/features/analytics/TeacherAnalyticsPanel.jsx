@@ -4,6 +4,7 @@ import { BLOOM_LEVELS, inferBloomLevel, summarizeBloomCoverage } from './bloom';
 import { analyzeCohorts } from './cohortAnalysis';
 import { exportAdminPdfReport, exportParentPdfReport } from './pdfReports';
 import { copyEJournalForGoogleSheets, exportAnalyticsCsvBundle } from './spreadsheetExport';
+import { buildRagQualityRecords, summarizeRagQuality } from './ragQuality';
 
 function fmt(n) {
   return Number.isFinite(n) ? n.toFixed(2) : '0.00';
@@ -46,7 +47,12 @@ const BLOOM_LABELS = {
   create: 'Create',
 };
 
-export default function TeacherAnalyticsPanel({ attempts = [], questions = [], onSetBloom }) {
+export default function TeacherAnalyticsPanel({
+  attempts = [],
+  questions = [],
+  onSetBloom,
+  onSetRagFeedback,
+}) {
   const data = useMemo(() => analyzeAttempts(attempts), [attempts]);
   const cohort = useMemo(() => analyzeCohorts(attempts), [attempts]);
   const bloom = useMemo(() => summarizeBloomCoverage(questions), [questions]);
@@ -54,6 +60,8 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
     () => (questions || []).filter((q) => q.type !== 'section'),
     [questions]
   );
+  const ragRecords = useMemo(() => buildRagQualityRecords(questions), [questions]);
+  const ragSummary = useMemo(() => summarizeRagQuality(ragRecords), [ragRecords]);
 
   const applyAutoBloom = () => {
     if (!onSetBloom) return;
@@ -324,6 +332,99 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
             </div>
           </>
         )}
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="text-sm font-black uppercase tracking-wider text-slate-500">
+          RAG quality dashboard
+        </h3>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Avg latency
+            </p>
+            <p className="mt-1 text-xl font-black text-slate-900">{ragSummary.avgLatencyMs}ms</p>
+            <p className="text-xs text-slate-500">P95: {ragSummary.p95LatencyMs}ms</p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Citation coverage
+            </p>
+            <p className="mt-1 text-xl font-black text-slate-900">
+              {ragSummary.citationCoveragePct}%
+            </p>
+            <p className="text-xs text-slate-500">Used / Retrieved citations</p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Hallucination sampling
+            </p>
+            <p className="mt-1 text-xl font-black text-slate-900">
+              {ragSummary.hallucinationRatePct}%
+            </p>
+            <p className="text-xs text-slate-500">
+              Flagged samples: {ragSummary.flaggedSamples.length}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Teacher feedback
+            </p>
+            <p className="mt-1 text-sm font-black text-slate-900">
+              Helpful {ragSummary.feedbackCounts.helpful} • Not helpful{' '}
+              {ragSummary.feedbackCounts['not-helpful']}
+            </p>
+            <p className="text-xs text-slate-500">
+              Unreviewed {ragSummary.feedbackCounts.unreviewed} • Flagged{' '}
+              {ragSummary.feedbackCounts.flagged}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-400">
+                <th className="py-2">QID</th>
+                <th className="py-2">Latency</th>
+                <th className="py-2">Citations</th>
+                <th className="py-2">Hallucination</th>
+                <th className="py-2">Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ragRecords.map((row) => (
+                <tr key={row.questionId} className="border-b border-slate-50">
+                  <td className="py-2 font-mono text-xs text-slate-700">{row.questionId}</td>
+                  <td className="py-2 text-slate-700">{row.latencyMs}ms</td>
+                  <td className="py-2 text-slate-700">
+                    {row.citationsUsed}/{row.citationsRetrieved}
+                  </td>
+                  <td className="py-2 text-slate-700">
+                    {row.hallucinationFlag ? 'Flagged' : 'OK'}
+                  </td>
+                  <td className="py-2">
+                    {onSetRagFeedback ? (
+                      <select
+                        value={row.feedback}
+                        onChange={(e) => onSetRagFeedback(row.questionId, e.target.value)}
+                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-700"
+                      >
+                        <option value="unreviewed">Unreviewed</option>
+                        <option value="helpful">Helpful</option>
+                        <option value="not-helpful">Not helpful</option>
+                        <option value="flagged">Flagged</option>
+                      </select>
+                    ) : (
+                      <span className="text-slate-700">{row.feedback}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

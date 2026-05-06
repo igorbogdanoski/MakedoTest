@@ -250,6 +250,10 @@ const App = () => {
     setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, bloomLevel } : q)));
   };
 
+  const setQuestionRagFeedback = (questionId, ragFeedback) => {
+    setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, ragFeedback } : q)));
+  };
+
   const duplicates = useMemo(() => {
     const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
     return texts.filter((item, index) => texts.indexOf(item) !== index);
@@ -1262,6 +1266,7 @@ const App = () => {
                   attempts={analyticsAttempts}
                   questions={questions}
                   onSetBloom={setQuestionBloom}
+                  onSetRagFeedback={setQuestionRagFeedback}
                 />
               ) : view === 'answerSheet' ? (
                 <div className="grid grid-cols-2 gap-10">
