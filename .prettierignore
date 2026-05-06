@@ -1,0 +1,6 @@
+dist
+node_modules
+package-lock.json
+backup_v6_pro_visuals
+backup_v6_stable
+*.md

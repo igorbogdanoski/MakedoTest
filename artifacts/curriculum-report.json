@@ -1,0 +1,60 @@
+{
+  "type": "curriculum-report",
+  "schemaVersion": "1",
+  "generatedAt": "2026-05-06T17:46:58.543Z",
+  "snapshotVersion": "2026-05-06",
+  "commitSha": "abcdef1234567",
+  "repository": "igorbogdanoski/math-curriculum-ai-navigator",
+  "extractedAt": "2026-05-06T00:00:00Z",
+  "valid": true,
+  "totalTracks": 6,
+  "totalGrades": 6,
+  "totalConcepts": 6,
+  "trackCoverage": [
+    {
+      "track": "primary",
+      "presentLevels": [1],
+      "gradeCount": 1,
+      "conceptCount": 1
+    },
+    {
+      "track": "gymnasium",
+      "presentLevels": [10],
+      "gradeCount": 1,
+      "conceptCount": 1
+    },
+    {
+      "track": "gymnasium_elective",
+      "presentLevels": [11],
+      "gradeCount": 1,
+      "conceptCount": 1
+    },
+    {
+      "track": "vocational4",
+      "presentLevels": [10],
+      "gradeCount": 1,
+      "conceptCount": 1
+    },
+    {
+      "track": "vocational3",
+      "presentLevels": [10],
+      "gradeCount": 1,
+      "conceptCount": 1
+    },
+    {
+      "track": "vocational2",
+      "presentLevels": [10],
+      "gradeCount": 1,
+      "conceptCount": 1
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Track primary missing levels: 2, 3, 4, 5, 6, 7, 8, 9",
+    "Track gymnasium missing levels: 11, 12, 13",
+    "Track gymnasium_elective missing levels: 12, 13",
+    "Track vocational4 missing levels: 11, 12, 13",
+    "Track vocational3 missing levels: 11, 12",
+    "Track vocational2 missing levels: 11"
+  ]
+}

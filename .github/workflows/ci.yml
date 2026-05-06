@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  critical_smoke:
+    name: Critical Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Critical Smoke Gates (fail-fast)
+        run: npm run test:critical
+
+  quality:
+    name: Lint, Test, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: critical_smoke
+
+    strategy:
+      matrix:
+        node: ['20', '22']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test -- --reporter=default
+
+      - name: Install functions dependencies
+        if: matrix.node == '22'
+        run: npm --prefix functions ci --no-audit --no-fund
+
+      - name: Functions tests
+        if: matrix.node == '22'
+        run: npm --prefix functions test
+
+      - name: Coverage
+        run: npm run coverage
+        continue-on-error: true
+
+      - name: Build (with placeholder Firebase env)
+        env:
+          VITE_FIREBASE_API_KEY: ci-placeholder
+          VITE_FIREBASE_AUTH_DOMAIN: ci.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: ci-project
+          VITE_FIREBASE_STORAGE_BUCKET: ci.appspot.com
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
+          VITE_FIREBASE_APP_ID: '1:000000000000:web:ci'
+        run: npm run build
+
+      - name: Upload build artifact
+        if: matrix.node == '22'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist
+          retention-days: 7

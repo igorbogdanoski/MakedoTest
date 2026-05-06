@@ -64,3 +64,25 @@
 
 ## 👨‍💻 Автор
 **Игор Богданоски** - EdTech експерт и главен архитект на МакедоТест.
+
+## ✅ Quality Gates (без компромиси)
+- `npm run test:student-smoke` проверува критичен StudentTake flow и React act guard.
+- `npm run test:rag-smoke` проверува RAG editor flow (Освежи + Вметни насоки).
+- `npm run test:critical` ги извршува двата smoke gate-а како fail-fast пакет.
+- Локален `pre-commit` hook (`.husky/pre-commit`) повикува `npm run lint-staged` за staged фајлови.
+- Локален `pre-push` hook (`.husky/pre-push`) автоматски повикува `npm run test:critical` пред push.
+- Troubleshooting за локални hooks: `docs/LOCAL_HOOKS_TROUBLESHOOTING.md`.
+- Release operations checklist: `docs/RELEASE_CAPTAIN_CHECKLIST.md`.
+- Во CI има посебен job `Critical Smoke` кој мора прв да помине.
+- Job-от `Lint, Test, Build` стартува само по успешен `Critical Smoke`.
+
+## 🔐 Branch Protection (препорака)
+- За `main` вклучи “Require status checks to pass before merging”.
+- Додај required checks:
+	- `Critical Smoke`
+	- `Lint, Test, Build (20)`
+	- `Lint, Test, Build (22)`
+- Вклучи “Require branches to be up to date before merging” за максимална стабилност.
+- Оперативен протокол за паднати checks: `docs/NO_MERGE_POLICY.md`.
+- Детален GitHub ruleset водич: `docs/GITHUB_RULESET_RECOMMENDATION.md`.
+- Audit checklista за enforcement проверка: `docs/BRANCH_PROTECTION_AUDIT_CHECKLIST.md`.

@@ -6,18 +6,69 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --fix",
+    "lint-staged": "lint-staged",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:student-smoke": "vitest run src/features/take/StudentTake.test.jsx --reporter=default",
+    "test:rag-smoke": "vitest run src/components/Question.test.jsx --reporter=default",
+    "test:critical": "npm run test:student-smoke && npm run test:rag-smoke",
+    "test:functions": "npm --prefix functions test",
+    "test:all": "npm test && npm run test:functions",
+    "qa:release": "npm run test:critical && npm test && npm run test:functions && npm run build",
+    "test:ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "validate:curriculum": "node scripts/validate-curriculum-snapshot.mjs",
+    "report:curriculum": "node scripts/generate-curriculum-report.mjs",
+    "ingest:curriculum:rag": "node scripts/ingest-curriculum-rag.mjs",
+    "prepare": "husky install"
   },
   "dependencies": {
     "firebase": "^10.8.0",
     "lucide-react": "^0.330.0",
+    "nanoid": "^5.0.7",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.1.0"
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/ui": "^2.1.9",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "husky": "^9.0.11",
+    "jsdom": "^24.0.0",
+    "lint-staged": "^15.2.2",
+    "postcss": "^8.4.47",
+    "prettier": "^3.2.5",
+    "tailwindcss": "^3.4.13",
+    "vite": "^5.1.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^2.1.9"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

@@ -1,0 +1,22 @@
+# Default owner for all files
+* @igorbogdanoski
+
+# CI and governance
+.github/workflows/* @igorbogdanoski
+.github/CODEOWNERS @igorbogdanoski
+.github/PULL_REQUEST_TEMPLATE.md @igorbogdanoski
+
+# Core student and RAG critical paths
+src/features/take/StudentTake.jsx @igorbogdanoski
+src/features/take/StudentTake.test.jsx @igorbogdanoski
+src/components/Question.jsx @igorbogdanoski
+src/components/Question.test.jsx @igorbogdanoski
+src/features/rag/* @igorbogdanoski
+
+# Backend RAG API
+functions/src/api/rag/* @igorbogdanoski
+functions/src/index.js @igorbogdanoski
+
+# Domain and grading logic
+src/domain/* @igorbogdanoski
+src/features/grading/* @igorbogdanoski

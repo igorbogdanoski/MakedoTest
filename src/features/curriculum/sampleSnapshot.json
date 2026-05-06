@@ -1,0 +1,159 @@
+{
+  "version": "2026-05-06",
+  "source": {
+    "repository": "igorbogdanoski/math-curriculum-ai-navigator",
+    "commitSha": "abcdef1234567",
+    "extractedAt": "2026-05-06T00:00:00Z"
+  },
+  "tracks": [
+    {
+      "track": "primary",
+      "grades": [
+        {
+          "id": "grade-1",
+          "level": 1,
+          "title": "I (прво) Одделение",
+          "weeklyHours": 3,
+          "topics": [
+            {
+              "id": "g1-topic-1",
+              "title": "ГЕОМЕТРИЈА",
+              "concepts": [
+                {
+                  "id": "g1-c-1",
+                  "title": "Прости 2D и 3D форми",
+                  "assessmentStandards": ["Препознава 2D и 3D форми во секојдневен контекст"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "track": "gymnasium",
+      "grades": [
+        {
+          "id": "gym-grade-10",
+          "level": 10,
+          "title": "X (десетто) — Гимназиско",
+          "weeklyHours": 4,
+          "secondaryTrack": "gymnasium",
+          "topics": [
+            {
+              "id": "gym10-t1",
+              "title": "БРОЕВИ И ОПЕРАЦИИ СО БРОЕВИ",
+              "concepts": [
+                {
+                  "id": "gym10-c-1",
+                  "title": "Множества и операции",
+                  "assessmentStandards": ["Применува множества за моделирање проблеми"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "track": "gymnasium_elective",
+      "grades": [
+        {
+          "id": "gym-el-11",
+          "level": 11,
+          "title": "XI — Изборен",
+          "weeklyHours": 3,
+          "secondaryTrack": "gymnasium_elective",
+          "topics": [
+            {
+              "id": "gym-el-t1",
+              "title": "Изборна тема",
+              "concepts": [
+                {
+                  "id": "gym-el-c1",
+                  "title": "Изборен концепт",
+                  "assessmentStandards": ["Применува изборни математички техники"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "track": "vocational4",
+      "grades": [
+        {
+          "id": "voc4-10",
+          "level": 10,
+          "title": "X — Стручно 4 год",
+          "weeklyHours": 3,
+          "secondaryTrack": "vocational4",
+          "topics": [
+            {
+              "id": "v4-t1",
+              "title": "Стручен модул",
+              "concepts": [
+                {
+                  "id": "v4-c1",
+                  "title": "Стручен концепт",
+                  "assessmentStandards": ["Применува математика во стручен контекст"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "track": "vocational3",
+      "grades": [
+        {
+          "id": "voc3-10",
+          "level": 10,
+          "title": "X — Стручно 3 год",
+          "weeklyHours": 2,
+          "secondaryTrack": "vocational3",
+          "topics": [
+            {
+              "id": "v3-t1",
+              "title": "Стручен модул",
+              "concepts": [
+                {
+                  "id": "v3-c1",
+                  "title": "Стручен концепт",
+                  "assessmentStandards": ["Решава практични пресметки"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "track": "vocational2",
+      "grades": [
+        {
+          "id": "voc2-10",
+          "level": 10,
+          "title": "X — Стручно 2 год",
+          "weeklyHours": 2,
+          "secondaryTrack": "vocational2",
+          "topics": [
+            {
+              "id": "v2-t1",
+              "title": "Стручен модул",
+              "concepts": [
+                {
+                  "id": "v2-c1",
+                  "title": "Стручен концепт",
+                  "assessmentStandards": ["Применува базична математичка писменост"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
