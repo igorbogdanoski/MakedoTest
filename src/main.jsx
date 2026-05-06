@@ -71,6 +71,9 @@ import {
 import RenderContent from './components/RenderContent';
 import LandingPage from './components/LandingPage';
 import Question from './components/Question';
+import TeacherAnalyticsPanel, {
+  buildDemoAttemptsFromQuestions,
+} from './features/analytics/TeacherAnalyticsPanel';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -240,6 +243,8 @@ const App = () => {
     }),
     [totalPoints]
   );
+
+  const analyticsAttempts = useMemo(() => buildDemoAttemptsFromQuestions(questions), [questions]);
 
   const duplicates = useMemo(() => {
     const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
@@ -721,7 +726,7 @@ const App = () => {
           </div>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-          {['editor', 'preview', 'answerKey', 'answerSheet'].map((v) => (
+          {['editor', 'preview', 'answerKey', 'answerSheet', 'analytics'].map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -733,7 +738,9 @@ const App = () => {
                   ? 'Тест'
                   : v === 'answerKey'
                     ? 'Клуч'
-                    : 'Лист'}
+                    : v === 'answerSheet'
+                      ? 'Лист'
+                      : 'Аналитика'}
             </button>
           ))}
         </div>
@@ -1231,7 +1238,7 @@ const App = () => {
                   </span>
                 </div>
               </div>
-              {view !== 'answerKey' && view !== 'answerSheet' && (
+              {view !== 'answerKey' && view !== 'answerSheet' && view !== 'analytics' && (
                 <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
                   <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
                     {t('student')}:
@@ -1246,7 +1253,9 @@ const App = () => {
             <div
               className={`relative z-10 flex-grow ${view === 'answerSheet' ? 'space-y-20' : ''}`}
             >
-              {view === 'answerSheet' ? (
+              {view === 'analytics' ? (
+                <TeacherAnalyticsPanel attempts={analyticsAttempts} />
+              ) : view === 'answerSheet' ? (
                 <div className="grid grid-cols-2 gap-10">
                   {questions.map((q, idx) => (
                     <div

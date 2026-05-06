@@ -47,7 +47,7 @@
 ### Фаза 3 — Teacher Analytics (1–2 месеци)
 Валута на B2B продажба кон училишта.
 
-- [x] **3.1 (engine)** `features/analytics/itemAnalysis.js` — pure psychometrics: p-value, point-biserial discrimination, classifyDifficulty/Discrimination, cohort summary + decile distribution (10 тестови). UI dashboard остана.
+- [x] **3.1** `features/analytics/itemAnalysis.js` + `features/analytics/TeacherAnalyticsPanel.jsx` — pure psychometrics (p-value, point-biserial, cohort stats, deciles) + teacher dashboard UI интеграција во главен app view.
 - [ ] **3.2** Bloom класификација (рачно/AI) → когнитивни извештаи
 - [ ] **3.3** Cohort analysis: одделение во семестар
 - [ ] **3.4** PDF извештаи за родители + училишна администрација
