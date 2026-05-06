@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { analyzeAttempts } from './itemAnalysis';
 import { BLOOM_LEVELS, inferBloomLevel, summarizeBloomCoverage } from './bloom';
 import { analyzeCohorts } from './cohortAnalysis';
+import { exportAdminPdfReport, exportParentPdfReport } from './pdfReports';
 
 function fmt(n) {
   return Number.isFinite(n) ? n.toFixed(2) : '0.00';
@@ -58,6 +59,24 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
     scoredQuestions.forEach((q) => onSetBloom(q.id, inferBloomLevel(q)));
   };
 
+  const handleExportParentReport = () => {
+    exportParentPdfReport({
+      schoolName: 'MakedoTest School',
+      testTitle: 'Teacher Analytics Snapshot',
+      attempts,
+      questions,
+    });
+  };
+
+  const handleExportAdminReport = () => {
+    exportAdminPdfReport({
+      schoolName: 'MakedoTest School',
+      testTitle: 'Teacher Analytics Snapshot',
+      attempts,
+      questions,
+    });
+  };
+
   if (!attempts.length) {
     return (
       <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -86,6 +105,23 @@ export default function TeacherAnalyticsPanel({ attempts = [], questions = [], o
           <p className="text-xs font-black uppercase text-slate-400">Медијана</p>
           <p className="mt-2 text-2xl font-black text-slate-900">{fmt(data.cohort.median)}%</p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleExportParentReport}
+          className="rounded-xl border border-sky-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-700 transition hover:bg-sky-50"
+        >
+          PDF Parent Report
+        </button>
+        <button
+          type="button"
+          onClick={handleExportAdminReport}
+          className="rounded-xl border border-violet-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-violet-700 transition hover:bg-violet-50"
+        >
+          PDF Admin Report
+        </button>
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

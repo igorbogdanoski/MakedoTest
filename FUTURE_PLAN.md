@@ -50,7 +50,7 @@
 - [x] **3.1** `features/analytics/itemAnalysis.js` + `features/analytics/TeacherAnalyticsPanel.jsx` — pure psychometrics (p-value, point-biserial, cohort stats, deciles) + teacher dashboard UI интеграција во главен app view.
 - [x] **3.2** Bloom класификација (рачно/AI-assisted heuristic) → когнитивни извештаи (coverage + manual override + auto-suggest)
 - [x] **3.3** Cohort analysis: одделение во семестар (grade x semester breakdown + trend deltas)
-- [ ] **3.4** PDF извештаи за родители + училишна администрација
+- [x] **3.4** PDF извештаи за родители + училишна администрација (print-ready parent/admin templates + export actions)
 - [ ] **3.5** Excel/Google Sheets извоз за е-дневници
 - [ ] **3.6** RAG quality dashboard: retrieval latency, citation coverage, hallucination sampling, teacher feedback loop
 
