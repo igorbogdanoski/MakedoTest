@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Shuffle,
   CheckCircle2,
-  CheckSquare,
   Plus,
   ArrowRight,
   MoveVertical,
@@ -24,6 +23,15 @@ import {
 import RenderContent from './RenderContent';
 import { queryRag } from '../features/rag/ragClient';
 import { composeRagHintBlock } from '../features/rag/suggestions';
+
+const BLOOM_OPTIONS = [
+  { value: 'remember', label: 'Remember' },
+  { value: 'understand', label: 'Understand' },
+  { value: 'apply', label: 'Apply' },
+  { value: 'analyze', label: 'Analyze' },
+  { value: 'evaluate', label: 'Evaluate' },
+  { value: 'create', label: 'Create' },
+];
 
 const STEMHelper = ({ onInsert }) => (
   <div className="flex flex-wrap gap-2 p-3 bg-white rounded-2xl border-2 border-indigo-100 w-full shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
@@ -440,6 +448,11 @@ const Question = ({
               {q.difficulty === 'hard' && <Flame size={10} fill="currentColor" />}
             </div>
           )}
+          {view !== 'editor' && q.bloomLevel && (
+            <span className="mt-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase text-indigo-600">
+              {q.bloomLevel}
+            </span>
+          )}
           {view === 'editor' && testInfo.subNumbering && (
             <span className="text-[8px] font-black uppercase text-slate-400">Број</span>
           )}
@@ -544,6 +557,34 @@ const Question = ({
                     ))}
                   </ul>
                 )}
+              </div>
+
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                <label
+                  htmlFor={`bloom-${q.id}`}
+                  className="text-[10px] font-black uppercase tracking-wider text-slate-500"
+                >
+                  Bloom level
+                </label>
+                <select
+                  id={`bloom-${q.id}`}
+                  value={q.bloomLevel || ''}
+                  onChange={(e) =>
+                    setQuestions(
+                      questions.map((qu) =>
+                        qu.id === q.id ? { ...qu, bloomLevel: e.target.value || undefined } : qu
+                      )
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-indigo-400"
+                >
+                  <option value="">Auto</option>
+                  {BLOOM_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="bg-white border border-slate-100 p-4 rounded-2xl text-sm font-bold text-slate-800 shadow-inner">

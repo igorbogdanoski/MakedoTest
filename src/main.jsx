@@ -246,6 +246,10 @@ const App = () => {
 
   const analyticsAttempts = useMemo(() => buildDemoAttemptsFromQuestions(questions), [questions]);
 
+  const setQuestionBloom = (questionId, bloomLevel) => {
+    setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, bloomLevel } : q)));
+  };
+
   const duplicates = useMemo(() => {
     const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
     return texts.filter((item, index) => texts.indexOf(item) !== index);
@@ -1254,7 +1258,11 @@ const App = () => {
               className={`relative z-10 flex-grow ${view === 'answerSheet' ? 'space-y-20' : ''}`}
             >
               {view === 'analytics' ? (
-                <TeacherAnalyticsPanel attempts={analyticsAttempts} />
+                <TeacherAnalyticsPanel
+                  attempts={analyticsAttempts}
+                  questions={questions}
+                  onSetBloom={setQuestionBloom}
+                />
               ) : view === 'answerSheet' ? (
                 <div className="grid grid-cols-2 gap-10">
                   {questions.map((q, idx) => (

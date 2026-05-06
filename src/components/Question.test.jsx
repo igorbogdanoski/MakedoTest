@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import Question from './Question.jsx';
 import { queryRag } from '../features/rag/ragClient';
 
@@ -49,8 +49,6 @@ describe('Question RAG editor flow', () => {
   });
 
   it('shows validation message when question text is empty', async () => {
-    const user = userEvent.setup();
-
     renderQuestionEditor({
       id: 'q1',
       type: 'multiple',
@@ -68,8 +66,6 @@ describe('Question RAG editor flow', () => {
   });
 
   it('refreshes and inserts RAG hints into question text', async () => {
-    const user = userEvent.setup();
-
     vi.mocked(queryRag).mockResolvedValue([
       {
         id: 'c-1',
@@ -110,5 +106,23 @@ describe('Question RAG editor flow', () => {
     const textarea = screen.getByPlaceholderText('Внесете задача...');
     expect(textarea.value).toContain('Насоки од наставна програма:');
     expect(textarea.value).toContain('Линеарни функции');
+  });
+
+  it('allows manual Bloom level selection', async () => {
+    renderQuestionEditor({
+      id: 'q3',
+      type: 'multiple',
+      text: 'Објасни ја равенката.',
+      points: 5,
+      options: ['A', 'B'],
+      correct: 0,
+    });
+
+    const bloomSelect = screen.getByRole('combobox', { name: /bloom level/i });
+    await act(async () => {
+      fireEvent.change(bloomSelect, { target: { value: 'analyze' } });
+    });
+
+    expect(bloomSelect).toHaveValue('analyze');
   });
 });

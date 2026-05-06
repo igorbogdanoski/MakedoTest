@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { analyzeAttempts } from './itemAnalysis';
+import { BLOOM_LEVELS, inferBloomLevel, summarizeBloomCoverage } from './bloom';
 
 function fmt(n) {
   return Number.isFinite(n) ? n.toFixed(2) : '0.00';
@@ -31,8 +32,27 @@ export function buildDemoAttemptsFromQuestions(questions = [], count = 24) {
   });
 }
 
-export default function TeacherAnalyticsPanel({ attempts = [] }) {
+const BLOOM_LABELS = {
+  remember: 'Remember',
+  understand: 'Understand',
+  apply: 'Apply',
+  analyze: 'Analyze',
+  evaluate: 'Evaluate',
+  create: 'Create',
+};
+
+export default function TeacherAnalyticsPanel({ attempts = [], questions = [], onSetBloom }) {
   const data = useMemo(() => analyzeAttempts(attempts), [attempts]);
+  const bloom = useMemo(() => summarizeBloomCoverage(questions), [questions]);
+  const scoredQuestions = useMemo(
+    () => (questions || []).filter((q) => q.type !== 'section'),
+    [questions]
+  );
+
+  const applyAutoBloom = () => {
+    if (!onSetBloom) return;
+    scoredQuestions.forEach((q) => onSetBloom(q.id, inferBloomLevel(q)));
+  };
 
   if (!attempts.length) {
     return (
@@ -79,6 +99,88 @@ export default function TeacherAnalyticsPanel({ attempts = [] }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-500">
+            Bloom coverage
+          </h3>
+          <button
+            type="button"
+            onClick={applyAutoBloom}
+            disabled={!onSetBloom || scoredQuestions.length === 0}
+            className="rounded-xl border border-indigo-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Auto suggest all
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {BLOOM_LEVELS.map((level) => (
+            <div key={level} className="rounded-2xl border border-slate-100 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500">
+                <span>{BLOOM_LABELS[level]}</span>
+                <span>
+                  {bloom.counts[level]} • {bloom.percentages[level]}%
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500"
+                  style={{ width: `${bloom.percentages[level]}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="text-sm font-black uppercase tracking-wider text-slate-500">
+          Cognitive mapping
+        </h3>
+        <div className="mt-4 overflow-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-400">
+                <th className="py-2">QID</th>
+                <th className="py-2">Type</th>
+                <th className="py-2">Recommended</th>
+                <th className="py-2">Current</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scoredQuestions.map((q) => {
+                const recommended = inferBloomLevel(q);
+                const current = q.bloomLevel || recommended;
+                return (
+                  <tr key={q.id} className="border-b border-slate-50">
+                    <td className="py-2 font-mono text-xs text-slate-700">{q.id}</td>
+                    <td className="py-2 text-slate-600">{q.type}</td>
+                    <td className="py-2 text-slate-700">{BLOOM_LABELS[recommended]}</td>
+                    <td className="py-2">
+                      {onSetBloom ? (
+                        <select
+                          value={current}
+                          onChange={(e) => onSetBloom(q.id, e.target.value)}
+                          className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-700"
+                        >
+                          {BLOOM_LEVELS.map((level) => (
+                            <option key={level} value={level}>
+                              {BLOOM_LABELS[level]}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-slate-700">{BLOOM_LABELS[current]}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 

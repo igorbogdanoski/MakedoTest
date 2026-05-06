@@ -48,7 +48,7 @@
 Валута на B2B продажба кон училишта.
 
 - [x] **3.1** `features/analytics/itemAnalysis.js` + `features/analytics/TeacherAnalyticsPanel.jsx` — pure psychometrics (p-value, point-biserial, cohort stats, deciles) + teacher dashboard UI интеграција во главен app view.
-- [ ] **3.2** Bloom класификација (рачно/AI) → когнитивни извештаи
+- [x] **3.2** Bloom класификација (рачно/AI-assisted heuristic) → когнитивни извештаи (coverage + manual override + auto-suggest)
 - [ ] **3.3** Cohort analysis: одделение во семестар
 - [ ] **3.4** PDF извештаи за родители + училишна администрација
 - [ ] **3.5** Excel/Google Sheets извоз за е-дневници
