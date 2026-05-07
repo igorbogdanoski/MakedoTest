@@ -176,7 +176,7 @@ function ChecklistInput({ q, value, onChange }) {
   );
 }
 
-function ManualInput({ q, value, onChange, kind }) {
+function ManualInput({ value, onChange, kind }) {
   if (kind === 'long') {
     return (
       <textarea

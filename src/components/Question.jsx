@@ -396,7 +396,7 @@ const Question = ({
                         Пример:
                       </span>
                       <p className="text-[11px] font-bold text-emerald-800 italic">
-                        "{helpContent[q.type].example}"
+                        &quot;{helpContent[q.type].example}&quot;
                       </p>
                     </div>
                     <div className="flex gap-2 items-center text-amber-600">
@@ -655,7 +655,7 @@ const Question = ({
             >
               {q.imageUrl && q.type !== 'diagram' && (
                 <div className="mb-6 rounded-[2rem] overflow-hidden border-4 border-slate-900 shadow-xl max-w-xl">
-                  <img src={q.imageUrl} alt="Task Image" className="w-full h-auto" />
+                  <img src={q.imageUrl} alt="Task illustration" className="w-full h-auto" />
                 </div>
               )}
               <RenderContent text={q.text} view={view} />
@@ -672,7 +672,8 @@ const Question = ({
                 className={`flex flex-col gap-4 rounded-[2rem] border-2 transition p-6 min-h-[140px] shadow-sm ${view === 'answerKey' && (q.type === 'multiple' ? q.correct === oIdx : (q.corrects || []).includes(oIdx)) ? 'bg-emerald-50 border-emerald-400 shadow-emerald-100' : 'border-slate-100 bg-white hover:border-indigo-100 hover:shadow-indigo-50'}`}
               >
                 <div className="flex items-start gap-6">
-                  <div
+                  <button
+                    type="button"
                     onClick={() => {
                       if (view !== 'editor') return;
                       if (q.type === 'multiple') {
@@ -694,7 +695,7 @@ const Question = ({
                     <span className={testInfo.zipGrade ? '-rotate-45' : ''}>
                       {String.fromCharCode(65 + oIdx)}
                     </span>
-                  </div>
+                  </button>
 
                   {view === 'editor' ? (
                     <div className="flex-1 space-y-3">
@@ -1307,6 +1308,22 @@ const Question = ({
                     questions.map((qu) => (qu.id === q.id ? { ...qu, markers: newMarkers } : qu))
                   );
                 }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  if (view !== 'editor' || !q.imageUrl) return;
+                  e.preventDefault();
+                  const x = 50;
+                  const y = 50;
+                  const newMarkers = [
+                    ...(q.markers || []),
+                    { x, y, label: (q.markers?.length || 0) + 1 },
+                  ];
+                  setQuestions(
+                    questions.map((qu) => (qu.id === q.id ? { ...qu, markers: newMarkers } : qu))
+                  );
+                }}
+                role="button"
+                tabIndex={0}
                 className={`relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-white shadow-xl max-w-2xl mx-auto aspect-square flex items-center justify-center cursor-crosshair group`}
               >
                 {q.showGrid && (

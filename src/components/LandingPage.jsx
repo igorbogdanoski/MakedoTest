@@ -5,7 +5,12 @@ import RenderContent from './RenderContent';
 const LandingPage = ({ setView, onStart, setShowTutorial, setTutorialStep, demoStep }) => (
   <div className="min-h-screen bg-white relative overflow-hidden font-sans">
     <nav className="px-8 py-6 flex justify-between items-center max-w-7xl mx-auto relative z-10">
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
+      <button
+        type="button"
+        className="flex items-center gap-3 cursor-pointer"
+        onClick={() => setView('landing')}
+        aria-label="Оди на почетна"
+      >
         <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-100">
           <Zap className="text-white" size={32} />
         </div>
@@ -17,7 +22,7 @@ const LandingPage = ({ setView, onStart, setShowTutorial, setTutorialStep, demoS
             Автор: Игор Богданоски
           </span>
         </div>
-      </div>
+      </button>
       <button
         onClick={() => setView('editor')}
         className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-xl hover:scale-105 transition"
@@ -113,7 +118,12 @@ const LandingPage = ({ setView, onStart, setShowTutorial, setTutorialStep, demoS
         </div>
       </div>
 
-      <div className="relative group cursor-pointer" onClick={() => setView('editor')}>
+      <button
+        type="button"
+        className="relative group cursor-pointer block w-full text-left"
+        onClick={() => setView('editor')}
+        aria-label="Отвори едитор"
+      >
         <div className="absolute -inset-10 bg-indigo-500/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="relative bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 flex flex-col gap-10 transform group-hover:scale-[1.02] transition-all duration-500">
           <div className="flex justify-between items-center">
@@ -142,7 +152,7 @@ const LandingPage = ({ setView, onStart, setShowTutorial, setTutorialStep, demoS
             Пример за СТЕМ приказ
           </div>
         </div>
-      </div>
+      </button>
     </main>
   </div>
 );

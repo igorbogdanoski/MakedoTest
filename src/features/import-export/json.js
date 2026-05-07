@@ -7,7 +7,7 @@
  *   • Сите грешки враќаат користнички friendly message — без stack traces.
  */
 
-import { parseQuestionList, parseTest, QuestionListSchema, TestSchema } from '../../domain/schema';
+import { parseQuestionList, parseTest } from '../../domain/schema';
 
 /**
  * Парсира корисничка JSON стринг и валидира како низа од прашања.

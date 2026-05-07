@@ -21,7 +21,6 @@ import {
   HelpCircle,
   Minus,
   List as ListIcon,
-  Square,
   Table as TableIcon,
   Grid3X3,
   Layers,
@@ -29,40 +28,22 @@ import {
   CheckCircle2,
   ImageIcon,
   FileText,
-  KeyRound,
-  School,
   Shuffle,
   Columns,
-  Info,
-  Beaker,
-  Sigma,
-  MoveVertical,
-  ChevronDown,
   BookOpen,
-  Languages,
-  Globe,
   History,
   Zap,
   Sparkles,
-  ArrowRight,
   Clock,
   Trophy,
   Cloud,
   Share2,
   Search,
-  ExternalLink,
   X,
-  Play,
-  MousePointer2,
   AlignJustify,
-  Copy,
-  AlertCircle,
-  Check,
   Hash,
-  RotateCcw,
   Target,
   Library,
-  Save,
   Menu,
   PanelLeftClose,
 } from 'lucide-react';
@@ -71,9 +52,8 @@ import {
 import RenderContent from './components/RenderContent';
 import LandingPage from './components/LandingPage';
 import Question from './components/Question';
-import TeacherAnalyticsPanel, {
-  buildDemoAttemptsFromQuestions,
-} from './features/analytics/TeacherAnalyticsPanel';
+import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
+import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -259,136 +239,139 @@ const App = () => {
     return texts.filter((item, index) => texts.indexOf(item) !== index);
   }, [questions]);
 
-  const questionTypes = [
-    {
-      id: 'multiple',
-      label: 'Понудени одговори',
-      icon: <CheckSquare size={16} />,
-      cat: 'базични',
-      subjects: ['all'],
-      priority: 10,
-    },
-    {
-      id: 'true-false',
-      label: 'Точно/Неточно',
-      icon: <HelpCircle size={16} />,
-      cat: 'базични',
-      subjects: ['all'],
-      priority: 9,
-    },
-    {
-      id: 'fill-blanks',
-      label: 'Пополни празнини',
-      icon: <Minus size={16} />,
-      cat: 'текстуални',
-      subjects: ['languages', 'history'],
-      priority: 8,
-    },
-    {
-      id: 'selection',
-      label: 'Селекција (Инлајн)',
-      icon: <CircleDot size={16} />,
-      cat: 'напредни',
-      subjects: ['languages'],
-      priority: 7,
-    },
-    {
-      id: 'multi-match',
-      label: 'Мулти-поврзување',
-      icon: <Grid3X3 size={16} />,
-      cat: 'логички',
-      subjects: ['stem', 'all'],
-      priority: 6,
-    },
-    {
-      id: 'short-answer',
-      label: 'Краток одговор',
-      icon: <Type size={16} />,
-      cat: 'текстуални',
-      subjects: ['all'],
-      priority: 10,
-    },
-    {
-      id: 'essay',
-      label: 'Есеј / Долг одговор',
-      icon: <FileText size={16} />,
-      cat: 'текстуални',
-      subjects: ['languages', 'history'],
-      priority: 5,
-    },
-    {
-      id: 'matching',
-      label: 'Поврзување',
-      icon: <Split size={16} />,
-      cat: 'логички',
-      subjects: ['all'],
-      priority: 8,
-    },
-    {
-      id: 'ordering',
-      label: 'Подредување',
-      icon: <ListOrdered size={16} />,
-      cat: 'логички',
-      subjects: ['history', 'stem', 'geometry'],
-      priority: 7,
-    },
-    {
-      id: 'list',
-      label: 'Листа (набројување)',
-      icon: <ListIcon size={16} />,
-      cat: 'листа',
-      subjects: ['all'],
-      priority: 6,
-    },
-    {
-      id: 'table',
-      label: 'Табела',
-      icon: <TableIcon size={16} />,
-      cat: 'напредни',
-      subjects: ['stem'],
-      priority: 9,
-    },
-    {
-      id: 'multi-part',
-      label: 'Мулти-дел (а, б, в)',
-      icon: <Layers size={16} />,
-      cat: 'напредни',
-      subjects: ['stem'],
-      priority: 8,
-    },
-    {
-      id: 'section',
-      label: 'Наслов на Секција',
-      icon: <AlignJustify size={16} />,
-      cat: 'напредни',
-      subjects: ['all'],
-      priority: 5,
-    },
-    {
-      id: 'diagram',
-      label: 'Дијаграм / Цртеж',
-      icon: <ImageIcon size={16} />,
-      cat: 'напредни',
-      subjects: ['stem', 'geography', 'geometry'],
-      priority: 7,
-    },
-    {
-      id: 'statements',
-      label: 'Изјави (Т/Н листа)',
-      icon: <CheckCircle2 size={16} />,
-      cat: 'базични',
-      subjects: ['all'],
-      priority: 8,
-    },
-    {
-      id: 'checklist',
-      label: 'Повеќекратен избор',
-      icon: <CheckSquare size={16} />,
-      cat: 'базични',
-      subjects: ['all'],
-      priority: 7,
-    },
-  ];
+  const questionTypes = useMemo(
+    () => [
+      {
+        id: 'multiple',
+        label: 'Понудени одговори',
+        icon: <CheckSquare size={16} />,
+        cat: 'базични',
+        subjects: ['all'],
+        priority: 10,
+      },
+      {
+        id: 'true-false',
+        label: 'Точно/Неточно',
+        icon: <HelpCircle size={16} />,
+        cat: 'базични',
+        subjects: ['all'],
+        priority: 9,
+      },
+      {
+        id: 'fill-blanks',
+        label: 'Пополни празнини',
+        icon: <Minus size={16} />,
+        cat: 'текстуални',
+        subjects: ['languages', 'history'],
+        priority: 8,
+      },
+      {
+        id: 'selection',
+        label: 'Селекција (Инлајн)',
+        icon: <CircleDot size={16} />,
+        cat: 'напредни',
+        subjects: ['languages'],
+        priority: 7,
+      },
+      {
+        id: 'multi-match',
+        label: 'Мулти-поврзување',
+        icon: <Grid3X3 size={16} />,
+        cat: 'логички',
+        subjects: ['stem', 'all'],
+        priority: 6,
+      },
+      {
+        id: 'short-answer',
+        label: 'Краток одговор',
+        icon: <Type size={16} />,
+        cat: 'текстуални',
+        subjects: ['all'],
+        priority: 10,
+      },
+      {
+        id: 'essay',
+        label: 'Есеј / Долг одговор',
+        icon: <FileText size={16} />,
+        cat: 'текстуални',
+        subjects: ['languages', 'history'],
+        priority: 5,
+      },
+      {
+        id: 'matching',
+        label: 'Поврзување',
+        icon: <Split size={16} />,
+        cat: 'логички',
+        subjects: ['all'],
+        priority: 8,
+      },
+      {
+        id: 'ordering',
+        label: 'Подредување',
+        icon: <ListOrdered size={16} />,
+        cat: 'логички',
+        subjects: ['history', 'stem', 'geometry'],
+        priority: 7,
+      },
+      {
+        id: 'list',
+        label: 'Листа (набројување)',
+        icon: <ListIcon size={16} />,
+        cat: 'листа',
+        subjects: ['all'],
+        priority: 6,
+      },
+      {
+        id: 'table',
+        label: 'Табела',
+        icon: <TableIcon size={16} />,
+        cat: 'напредни',
+        subjects: ['stem'],
+        priority: 9,
+      },
+      {
+        id: 'multi-part',
+        label: 'Мулти-дел (а, б, в)',
+        icon: <Layers size={16} />,
+        cat: 'напредни',
+        subjects: ['stem'],
+        priority: 8,
+      },
+      {
+        id: 'section',
+        label: 'Наслов на Секција',
+        icon: <AlignJustify size={16} />,
+        cat: 'напредни',
+        subjects: ['all'],
+        priority: 5,
+      },
+      {
+        id: 'diagram',
+        label: 'Дијаграм / Цртеж',
+        icon: <ImageIcon size={16} />,
+        cat: 'напредни',
+        subjects: ['stem', 'geography', 'geometry'],
+        priority: 7,
+      },
+      {
+        id: 'statements',
+        label: 'Изјави (Т/Н листа)',
+        icon: <CheckCircle2 size={16} />,
+        cat: 'базични',
+        subjects: ['all'],
+        priority: 8,
+      },
+      {
+        id: 'checklist',
+        label: 'Повеќекратен избор',
+        icon: <CheckSquare size={16} />,
+        cat: 'базични',
+        subjects: ['all'],
+        priority: 7,
+      },
+    ],
+    []
+  );
 
   const categoryIcons = {
     базични: <Zap size={14} className="text-amber-500" />,
@@ -446,7 +429,7 @@ const App = () => {
     // 3. Category Filter
     if (activeCategory === 'all') return types;
     return types.filter((t) => t.subjects.includes(activeCategory) || t.subjects.includes('all'));
-  }, [activeCategory, typeSearch, testInfo.subject]);
+  }, [activeCategory, typeSearch, testInfo.subject, questionTypes]);
 
   const tutorialSteps = [
     {
@@ -546,6 +529,13 @@ const App = () => {
       }, 300);
     } else {
       window.print();
+    }
+  };
+
+  const triggerOnEnterOrSpace = (event, callback) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      callback();
     }
   };
 
@@ -723,15 +713,17 @@ const App = () => {
           >
             {sidebarOpen ? <PanelLeftClose size={20} /> : <Menu size={20} />}
           </button>
-          <div
+          <button
+            type="button"
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => setView('landing')}
+            aria-label="Оди на почетна"
           >
             <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg">
               <Zap size={20} />
             </div>
             <span className="font-black text-lg uppercase tracking-tighter">МакедоТест</span>
-          </div>
+          </button>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
           {['editor', 'preview', 'answerKey', 'answerSheet', 'analytics'].map((v) => (
@@ -1056,7 +1048,14 @@ const App = () => {
                   <div
                     key={bq.id}
                     className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative group cursor-pointer hover:bg-white hover:border-indigo-100 transition shadow-sm"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setQuestions([...questions, { ...bq, id: Date.now() }])}
+                    onKeyDown={(e) =>
+                      triggerOnEnterOrSpace(e, () =>
+                        setQuestions([...questions, { ...bq, id: Date.now() }])
+                      )
+                    }
                   >
                     <p className="text-[10px] font-bold text-slate-500 line-clamp-2 leading-relaxed">
                       <RenderContent text={bq.text} />
@@ -1088,6 +1087,8 @@ const App = () => {
                   <div
                     key={t.id}
                     className="p-4 bg-white rounded-2xl border border-slate-100 relative group cursor-pointer hover:border-indigo-100 transition shadow-sm"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       if (
                         window.confirm(
@@ -1098,6 +1099,18 @@ const App = () => {
                         setTestInfo(t.testInfo);
                       }
                     }}
+                    onKeyDown={(e) =>
+                      triggerOnEnterOrSpace(e, () => {
+                        if (
+                          window.confirm(
+                            'Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.'
+                          )
+                        ) {
+                          setQuestions(t.questions);
+                          setTestInfo(t.testInfo);
+                        }
+                      })
+                    }
                   >
                     <p className="text-[10px] font-black text-slate-900 line-clamp-1 uppercase">
                       {t.testInfo.subject}
@@ -1553,6 +1566,8 @@ const App = () => {
     </div>
   );
 };
+
+export default App;
 
 // Mount the app — public student-take route има предност пред главниот editor.
 const takeTarget = resolveTakeRoute({
