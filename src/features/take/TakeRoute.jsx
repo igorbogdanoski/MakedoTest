@@ -10,7 +10,12 @@
 
 import { useEffect, useState } from 'react';
 import StudentTake from './StudentTake';
-import { loadPublishedTest, loadResumeState, saveResumeState } from './publish';
+import {
+  loadPublishedTest,
+  loadResumeState,
+  saveResumeState,
+  subscribeQuestionAttachments,
+} from './publish';
 
 export default function TakeRoute({ code, resumeToken = null }) {
   const [state, setState] = useState({
@@ -19,6 +24,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
     error: null,
     resumeResponses: null,
     resumeWarning: null,
+    remoteAttachmentByQuestion: {},
   });
 
   useEffect(() => {
@@ -29,6 +35,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
       error: null,
       resumeResponses: null,
       resumeWarning: null,
+      remoteAttachmentByQuestion: {},
     });
     loadPublishedTest(code).then(async (res) => {
       if (cancelled) return;
@@ -43,6 +50,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
               error: null,
               resumeResponses: resume.data.responses,
               resumeWarning: null,
+              remoteAttachmentByQuestion: {},
             });
           } else {
             setState({
@@ -51,6 +59,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
               error: null,
               resumeResponses: null,
               resumeWarning: resume.error,
+              remoteAttachmentByQuestion: {},
             });
           }
           return;
@@ -61,6 +70,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
           error: null,
           resumeResponses: null,
           resumeWarning: null,
+          remoteAttachmentByQuestion: {},
         });
       } else {
         setState({
@@ -69,6 +79,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
           error: res,
           resumeResponses: null,
           resumeWarning: null,
+          remoteAttachmentByQuestion: {},
         });
       }
     });
@@ -76,6 +87,18 @@ export default function TakeRoute({ code, resumeToken = null }) {
       cancelled = true;
     };
   }, [code, resumeToken]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeQuestionAttachments(
+      code,
+      (byQuestion) => {
+        setState((prev) => ({ ...prev, remoteAttachmentByQuestion: byQuestion }));
+      },
+      () => {}
+    );
+
+    return () => unsubscribe();
+  }, [code]);
 
   const handleSaveResume = async (responses, currentToken = null) => {
     const save = await saveResumeState({
@@ -118,6 +141,7 @@ export default function TakeRoute({ code, resumeToken = null }) {
       initialResponses={state.resumeResponses}
       initialResumeToken={resumeToken}
       resumeWarning={state.resumeWarning}
+      remoteAttachmentByQuestion={state.remoteAttachmentByQuestion}
       onSaveResume={handleSaveResume}
     />
   );

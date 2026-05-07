@@ -4,6 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import StudentTake from './StudentTake.jsx';
 import { requestServerSignedProof } from './proofClient';
+import { uploadHandwrittenAttachment } from './attachments';
+import {
+  activateAttachmentSession,
+  createAttachmentSession,
+  savePublishedAttempt,
+  saveQuestionAttachmentRecord,
+} from './publish';
 
 async function clickWithAct(user, target) {
   await act(async () => {
@@ -33,6 +40,27 @@ vi.mock('./proofClient', () => ({
     verificationId: (payload.questionId || 'SUBMISSION').toUpperCase().slice(0, 12),
   })),
 }));
+
+vi.mock('./attachments', () => ({
+  uploadHandwrittenAttachment: vi.fn(async (file, ctx) => ({
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    storagePath: `uploads/${ctx.code}/${ctx.questionId}/${ctx.verificationId}/${file.name}`,
+    downloadUrl: `https://files.example/${file.name}`,
+  })),
+}));
+
+vi.mock('./publish', async () => {
+  const actual = await vi.importActual('./publish');
+  return {
+    ...actual,
+    createAttachmentSession: vi.fn(async () => ({ ok: true })),
+    activateAttachmentSession: vi.fn(async () => ({ ok: true })),
+    saveQuestionAttachmentRecord: vi.fn(async () => ({ ok: true })),
+    savePublishedAttempt: vi.fn(async () => ({ ok: true, attemptId: 'ATTEMPT1' })),
+  };
+});
 
 const baseTest = {
   id: 't1',
@@ -234,9 +262,14 @@ describe('StudentTake', () => {
     ).toBeInTheDocument();
 
     const submitted = onSubmit.mock.calls[0][0];
-    expect(submitted.attachments.e1.name).toBe('solution.png');
+    expect(submitted.attachments.e1.attachment.name).toBe('solution.png');
     expect(submitted.submissionProof.verificationId).toBeTruthy();
     expect(requestServerSignedProof).toHaveBeenCalled();
+    expect(createAttachmentSession).toHaveBeenCalled();
+    expect(activateAttachmentSession).toHaveBeenCalled();
+    expect(uploadHandwrittenAttachment).toHaveBeenCalled();
+    expect(saveQuestionAttachmentRecord).toHaveBeenCalled();
+    expect(savePublishedAttempt).toHaveBeenCalled();
   });
 });
 

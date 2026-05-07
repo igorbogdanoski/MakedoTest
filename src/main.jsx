@@ -5,8 +5,9 @@ import { registerSW } from 'virtual:pwa-register';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, onSnapshot, addDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { auth, db, rtdb, APP_ID } from './lib/firebase';
-import { resolveTakeRoute } from './features/take/route';
+import { resolvePublicRoute } from './features/take/route';
 import TakeRoute from './features/take/TakeRoute';
+import AttachmentUploadRoute from './features/take/AttachmentUploadRoute';
 import {
   Plus,
   Trash2,
@@ -79,6 +80,7 @@ import {
   upsertPresenceEntry,
 } from './features/collab/presencePolicy';
 import { createDefaultResponseConfig } from './domain/responsePolicy';
+import TeacherVerifyPanel from './features/take/TeacherVerifyPanel';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -1059,7 +1061,7 @@ const App = () => {
           </button>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-          {['editor', 'preview', 'answerKey', 'answerSheet', 'analytics'].map((v) => (
+          {['editor', 'preview', 'answerKey', 'answerSheet', 'analytics', 'verify'].map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -1073,7 +1075,9 @@ const App = () => {
                     ? 'Клуч'
                     : v === 'answerSheet'
                       ? 'Лист'
-                      : 'Аналитика'}
+                      : v === 'analytics'
+                        ? 'Аналитика'
+                        : 'Verify'}
             </button>
           ))}
         </div>
@@ -1689,6 +1693,8 @@ const App = () => {
                   onSetBloom={setQuestionBloom}
                   onSetRagFeedback={setQuestionRagFeedback}
                 />
+              ) : view === 'verify' ? (
+                <TeacherVerifyPanel />
               ) : view === 'answerSheet' ? (
                 <div className="grid grid-cols-2 gap-10">
                   {questions.map((q, idx) => (
@@ -1978,7 +1984,7 @@ const App = () => {
 export default App;
 
 // Mount the app — public student-take route има предност пред главниот editor.
-const takeTarget = resolveTakeRoute({
+const publicRoute = resolvePublicRoute({
   pathname: window.location.pathname,
   search: window.location.search,
 });
@@ -1995,8 +2001,17 @@ mountNode[ROOT_INSTANCE_KEY] = root;
 
 root.render(
   <React.StrictMode>
-    {takeTarget ? (
-      <TakeRoute code={takeTarget.code} resumeToken={takeTarget.resumeToken} />
+    {publicRoute?.kind === 'take' ? (
+      <TakeRoute code={publicRoute.code} resumeToken={publicRoute.resumeToken} />
+    ) : publicRoute?.kind === 'upload' ? (
+      <AttachmentUploadRoute
+        code={publicRoute.code}
+        questionId={publicRoute.questionId}
+        verificationId={publicRoute.verificationId}
+        signature={publicRoute.signature}
+        payloadHash={publicRoute.payloadHash}
+        submittedAt={publicRoute.submittedAt}
+      />
     ) : (
       <App />
     )}

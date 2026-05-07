@@ -18,6 +18,14 @@ import RenderContent from '../../components/RenderContent';
 import { readDraftIndexedDb, removeDraftIndexedDb, writeDraftIndexedDb } from './draftStorage';
 import { requestServerSignedProof } from './proofClient';
 import { isOpenResponseType, resolveResponseConfig } from '../../domain/responsePolicy';
+import { buildAttachmentUploadUrl } from './route';
+import { uploadHandwrittenAttachment } from './attachments';
+import {
+  activateAttachmentSession,
+  createAttachmentSession,
+  savePublishedAttempt,
+  saveQuestionAttachmentRecord,
+} from './publish';
 
 const STORAGE_PREFIX = 'makedo:take:';
 
@@ -144,9 +152,22 @@ async function buildQuestionUploadGate({ test, code, questionId }) {
     signedBy: token?.signature ? 'server' : 'client-fallback',
   };
 
+  const companionUrl = buildAttachmentUploadUrl(
+    {
+      code: code || 'preview',
+      questionId,
+      verificationId,
+      signature: qrPayload.signature,
+      payloadHash,
+      submittedAt: issuedAt,
+    },
+    window.location.origin
+  );
+
   return {
     ...qrPayload,
-    qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(JSON.stringify(qrPayload))}`,
+    companionUrl,
+    qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(companionUrl)}`,
     unlocked: false,
   };
 }
@@ -320,9 +341,11 @@ function ManualInput({
   uploadGate,
   onRequestUploadGate,
   onUnlockUploadGate,
+  onAttachmentUpload,
 }) {
   const [mathOpen, setMathOpen] = useState(false);
   const canUploadNow = allowHandwrittenUpload && (!requireQrForAttachment || uploadGate?.unlocked);
+  const attachmentName = attachment?.attachment?.name || attachment?.name || '';
 
   const insertMath = (token) => {
     const current = String(value ?? '');
@@ -372,12 +395,13 @@ function ManualInput({
                     fileHash,
                     uploadGateVerificationId: uploadGate?.verificationId || null,
                   });
+                  await onAttachmentUpload?.(file);
                 }}
               />
             </label>
           )}
-          {attachment?.name && (
-            <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
+          {attachmentName && (
+            <span className="text-xs text-ink-muted">Прикачено: {attachmentName}</span>
           )}
         </div>
         {allowHandwrittenUpload && requireQrForAttachment && uploadGate && !uploadGate.unlocked && (
@@ -464,12 +488,13 @@ function ManualInput({
                   fileHash,
                   uploadGateVerificationId: uploadGate?.verificationId || null,
                 });
+                await onAttachmentUpload?.(file);
               }}
             />
           </label>
         )}
-        {attachment?.name && (
-          <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
+        {attachmentName && (
+          <span className="text-xs text-ink-muted">Прикачено: {attachmentName}</span>
         )}
       </div>
       {allowHandwrittenUpload && requireQrForAttachment && uploadGate && !uploadGate.unlocked && (
@@ -525,6 +550,7 @@ function QuestionView({
   uploadGate,
   onRequestUploadGate,
   onUnlockUploadGate,
+  onAttachmentUpload,
 }) {
   const responseConfig = resolveResponseConfig(q);
 
@@ -563,6 +589,7 @@ function QuestionView({
           uploadGate={uploadGate}
           onRequestUploadGate={onRequestUploadGate}
           onUnlockUploadGate={onUnlockUploadGate}
+          onAttachmentUpload={onAttachmentUpload}
         />
       )}
       {q.type === 'essay' && (
@@ -579,6 +606,7 @@ function QuestionView({
           uploadGate={uploadGate}
           onRequestUploadGate={onRequestUploadGate}
           onUnlockUploadGate={onUnlockUploadGate}
+          onAttachmentUpload={onAttachmentUpload}
         />
       )}
       {!['multiple', 'true-false', 'checklist', 'short-answer', 'fill-blanks', 'essay'].includes(
@@ -600,6 +628,7 @@ function QuestionView({
             uploadGate={uploadGate}
             onRequestUploadGate={onRequestUploadGate}
             onUnlockUploadGate={onUnlockUploadGate}
+            onAttachmentUpload={onAttachmentUpload}
           />
         </p>
       )}
@@ -615,6 +644,7 @@ export default function StudentTake({
   initialResumeToken = null,
   resumeWarning = null,
   onSaveResume,
+  remoteAttachmentByQuestion = {},
 }) {
   const [responses, setResponses, clearDraft] = useDraft(code, initialResponses);
   const [attachmentByQuestion, setAttachmentByQuestion] = useState({});
@@ -641,9 +671,9 @@ export default function StudentTake({
           ((responses[q.id] != null && responses[q.id] !== '') ||
             (isOpenResponseType(q.type) &&
               resolveResponseConfig(q).allowHandwrittenUpload &&
-              !!attachmentByQuestion[q.id]))
+              !!(attachmentByQuestion[q.id] || remoteAttachmentByQuestion[q.id])))
       ).length,
-    [test, responses, attachmentByQuestion]
+    [test, responses, attachmentByQuestion, remoteAttachmentByQuestion]
   );
   const total = test.questions.filter((q) => q.type !== 'section').length;
   const progress = total === 0 ? 0 : Math.round((answered / total) * 100);
@@ -658,6 +688,17 @@ export default function StudentTake({
       attachmentByQuestion,
     });
     setSubmissionProof(proof);
+    if (code) {
+      await savePublishedAttempt({
+        code,
+        responses,
+        submissionProof: proof,
+        attachments: {
+          ...remoteAttachmentByQuestion,
+          ...attachmentByQuestion,
+        },
+      });
+    }
     setSubmitted(true);
     if (onSubmit) {
       onSubmit({
@@ -683,6 +724,27 @@ export default function StudentTake({
 
   const handleRequestUploadGate = async (questionId) => {
     const gate = await buildQuestionUploadGate({ test, code, questionId });
+    if (code) {
+      await createAttachmentSession({
+        code,
+        questionId,
+        verificationId: gate.verificationId,
+        questionText:
+          test.questions.find((item) => String(item.id) === String(questionId))?.text || '',
+        payload: {
+          v: gate.v,
+          scope: gate.scope,
+          testId: gate.testId,
+          questionId: gate.questionId,
+          code: gate.code,
+          submittedAt: gate.submittedAt,
+          payloadHash: gate.payloadHash,
+          attachmentCount: gate.attachmentCount,
+        },
+        signature: gate.signature,
+        signedBy: gate.signedBy,
+      });
+    }
     setUploadGateByQuestion((prev) => ({
       ...prev,
       [questionId]: gate,
@@ -690,12 +752,82 @@ export default function StudentTake({
   };
 
   const handleUnlockUploadGate = (questionId) => {
+    const gate = uploadGateByQuestion[questionId];
+    if (code && gate?.verificationId) {
+      activateAttachmentSession({ code, questionId, verificationId: gate.verificationId });
+    }
     setUploadGateByQuestion((prev) => ({
       ...prev,
       [questionId]: {
         ...prev[questionId],
         unlocked: true,
       },
+    }));
+  };
+
+  const handleAttachmentUpload = async (question, file) => {
+    let gate = uploadGateByQuestion[question.id] || null;
+    if (!gate) {
+      gate = await buildQuestionUploadGate({ test, code, questionId: question.id });
+      setUploadGateByQuestion((prev) => ({
+        ...prev,
+        [question.id]: { ...gate, unlocked: true },
+      }));
+      if (code) {
+        await createAttachmentSession({
+          code,
+          questionId: question.id,
+          verificationId: gate.verificationId,
+          questionText: question.text || '',
+          payload: {
+            v: gate.v,
+            scope: gate.scope,
+            testId: gate.testId,
+            questionId: gate.questionId,
+            code: gate.code,
+            submittedAt: gate.submittedAt,
+            payloadHash: gate.payloadHash,
+            attachmentCount: gate.attachmentCount,
+          },
+          signature: gate.signature,
+          signedBy: gate.signedBy,
+        });
+      }
+    }
+
+    const uploaded = await uploadHandwrittenAttachment(file, {
+      code: code || 'preview',
+      questionId: question.id,
+      verificationId: gate.verificationId,
+    });
+
+    const attachmentRecord = {
+      code: code || 'preview',
+      questionId: question.id,
+      verificationId: gate.verificationId,
+      questionText: question.text || '',
+      payload: {
+        v: gate.v,
+        scope: gate.scope,
+        testId: gate.testId,
+        questionId: gate.questionId,
+        code: gate.code,
+        submittedAt: gate.submittedAt,
+        payloadHash: gate.payloadHash,
+        attachmentCount: gate.attachmentCount,
+      },
+      signature: gate.signature,
+      signedBy: gate.signedBy,
+      attachment: uploaded,
+    };
+
+    if (code) {
+      await saveQuestionAttachmentRecord(attachmentRecord);
+    }
+
+    setAttachmentByQuestion((prev) => ({
+      ...prev,
+      [question.id]: attachmentRecord,
     }));
   };
 
@@ -756,6 +888,7 @@ export default function StudentTake({
               setSubmitted(false);
               setSubmissionProof(null);
               setUploadGateByQuestion({});
+              setAttachmentByQuestion({});
             }}
             className="btn-ghost mt-6"
           >
@@ -799,14 +932,21 @@ export default function StudentTake({
           index={i}
           value={responses[q.id]}
           onChange={(v) => setResponses((r) => ({ ...r, [q.id]: v }))}
-          attachment={attachmentByQuestion[q.id] || null}
+          attachment={attachmentByQuestion[q.id] || remoteAttachmentByQuestion[q.id] || null}
           uploadGate={uploadGateByQuestion[q.id] || null}
           onRequestUploadGate={() => handleRequestUploadGate(q.id)}
           onUnlockUploadGate={() => handleUnlockUploadGate(q.id)}
+          onAttachmentUpload={(file) => handleAttachmentUpload(q, file)}
           onAttachmentChange={(meta) =>
             setAttachmentByQuestion((prev) => ({
               ...prev,
-              [q.id]: meta,
+              [q.id]: {
+                ...(prev[q.id] || {}),
+                attachment: {
+                  ...(prev[q.id]?.attachment || {}),
+                  ...meta,
+                },
+              },
             }))
           }
         />

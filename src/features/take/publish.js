@@ -16,15 +16,30 @@
  *   • Loader враќа `{ ok, data, error }` shape (нема throws за not-found).
  */
 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from 'firebase/firestore';
 import { db, APP_ID } from '../../lib/firebase';
 import { parseTest } from '../../domain/schema';
 
 const COLLECTION = 'publishedTests';
 const RESUME_COLLECTION = 'publishedResumes';
+const ATTACHMENT_SESSION_COLLECTION = 'publishedAttachmentSessions';
+const ATTACHMENT_RECORD_COLLECTION = 'publishedQuestionAttachments';
+const ATTEMPT_COLLECTION = 'publishedAttempts';
 
 const CODE_RE = /^[A-Za-z0-9_-]{3,32}$/;
 const RESUME_TOKEN_RE = /^[A-Za-z0-9_-]{6,64}$/;
+const QUESTION_ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
+const VERIFICATION_ID_RE = /^[A-Za-z0-9_-]{6,80}$/;
 
 function pathFor(code) {
   return `artifacts/${APP_ID}/${COLLECTION}/${code}`;
@@ -34,8 +49,31 @@ function resumePathFor(code, resumeToken) {
   return `artifacts/${APP_ID}/${RESUME_COLLECTION}/${code}__${resumeToken}`;
 }
 
+function attachmentSessionPathFor(code, questionId, verificationId) {
+  return `artifacts/${APP_ID}/${ATTACHMENT_SESSION_COLLECTION}/${code}__${questionId}__${verificationId}`;
+}
+
+function attachmentRecordPathFor(code, questionId, verificationId) {
+  return `artifacts/${APP_ID}/${ATTACHMENT_RECORD_COLLECTION}/${code}__${questionId}__${verificationId}`;
+}
+
+function attachmentRecordsCollectionPath() {
+  return `artifacts/${APP_ID}/${ATTACHMENT_RECORD_COLLECTION}`;
+}
+
+function attemptsCollectionPath() {
+  return `artifacts/${APP_ID}/${ATTEMPT_COLLECTION}`;
+}
+
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isQuestionRefValid(questionId, verificationId) {
+  return (
+    QUESTION_ID_RE.test(String(questionId ?? '')) &&
+    VERIFICATION_ID_RE.test(String(verificationId ?? ''))
+  );
 }
 
 /**
@@ -182,5 +220,215 @@ export async function loadResumeState(input) {
     return { ok: true, data: { responses: raw.responses } };
   } catch (err) {
     return { ok: false, error: err?.message ?? 'Грешка при вчитување.', status: 'network' };
+  }
+}
+
+export async function createAttachmentSession(input) {
+  const code = String(input?.code ?? '');
+  const questionId = String(input?.questionId ?? '');
+  const verificationId = String(input?.verificationId ?? '');
+  if (!CODE_RE.test(code) || !isQuestionRefValid(questionId, verificationId)) {
+    return { ok: false, error: 'Невалиден attachment session.', status: 'invalid' };
+  }
+
+  try {
+    await setDoc(doc(db, attachmentSessionPathFor(code, questionId, verificationId)), {
+      code,
+      questionId,
+      verificationId,
+      questionText: input?.questionText ?? '',
+      payload: input?.payload ?? null,
+      signature: input?.signature ?? null,
+      signedBy: input?.signedBy ?? 'unknown',
+      createdAt: serverTimestamp(),
+      scannedAt: null,
+      uploadStatus: 'pending',
+    });
+    return { ok: true, verificationId };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при креирање upload сесија.',
+      status: 'network',
+    };
+  }
+}
+
+export async function activateAttachmentSession(input) {
+  const code = String(input?.code ?? '');
+  const questionId = String(input?.questionId ?? '');
+  const verificationId = String(input?.verificationId ?? '');
+  if (!CODE_RE.test(code) || !isQuestionRefValid(questionId, verificationId)) {
+    return { ok: false, error: 'Невалидна attachment активација.', status: 'invalid' };
+  }
+
+  try {
+    await setDoc(
+      doc(db, attachmentSessionPathFor(code, questionId, verificationId)),
+      {
+        code,
+        questionId,
+        verificationId,
+        scannedAt: serverTimestamp(),
+        uploadStatus: 'ready',
+      },
+      { merge: true }
+    );
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при активација на upload сесија.',
+      status: 'network',
+    };
+  }
+}
+
+export async function loadAttachmentSession(input) {
+  const code = String(input?.code ?? '');
+  const questionId = String(input?.questionId ?? '');
+  const verificationId = String(input?.verificationId ?? '');
+  if (!CODE_RE.test(code) || !isQuestionRefValid(questionId, verificationId)) {
+    return { ok: false, error: 'Невалидна attachment сесија.', status: 'invalid' };
+  }
+
+  try {
+    const snap = await getDoc(doc(db, attachmentSessionPathFor(code, questionId, verificationId)));
+    if (!snap.exists()) {
+      return { ok: false, error: 'Upload сесијата не постои.', status: 'not-found' };
+    }
+    return { ok: true, data: snap.data() };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при вчитување upload сесија.',
+      status: 'network',
+    };
+  }
+}
+
+export async function saveQuestionAttachmentRecord(input) {
+  const code = String(input?.code ?? '');
+  const questionId = String(input?.questionId ?? '');
+  const verificationId = String(input?.verificationId ?? '');
+  if (!CODE_RE.test(code) || !isQuestionRefValid(questionId, verificationId)) {
+    return { ok: false, error: 'Невалиден attachment запис.', status: 'invalid' };
+  }
+
+  if (!isPlainObject(input?.attachment)) {
+    return { ok: false, error: 'Невалиден attachment payload.', status: 'invalid' };
+  }
+
+  try {
+    await setDoc(doc(db, attachmentRecordPathFor(code, questionId, verificationId)), {
+      code,
+      questionId,
+      verificationId,
+      attachment: input.attachment,
+      questionText: input?.questionText ?? '',
+      payload: input?.payload ?? null,
+      signature: input?.signature ?? null,
+      signedBy: input?.signedBy ?? 'unknown',
+      uploadedAt: serverTimestamp(),
+    });
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при зачувување attachment запис.',
+      status: 'network',
+    };
+  }
+}
+
+export function subscribeQuestionAttachments(code, onData, onError) {
+  if (!CODE_RE.test(String(code ?? ''))) {
+    onError?.({ ok: false, error: 'Невалиден код.', status: 'invalid' });
+    return () => {};
+  }
+
+  const q = query(collection(db, attachmentRecordsCollectionPath()), where('code', '==', code));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = snap.docs.map((item) => item.data());
+      const byQuestion = items.reduce((acc, item) => {
+        acc[item.questionId] = item;
+        return acc;
+      }, {});
+      onData?.(byQuestion, items);
+    },
+    (err) => {
+      onError?.({
+        ok: false,
+        error: err?.message ?? 'Грешка при следење attachment записи.',
+        status: 'network',
+      });
+    }
+  );
+}
+
+export async function listQuestionAttachments(code) {
+  if (!CODE_RE.test(String(code ?? ''))) {
+    return { ok: false, error: 'Невалиден код.', status: 'invalid' };
+  }
+
+  try {
+    const q = query(collection(db, attachmentRecordsCollectionPath()), where('code', '==', code));
+    const snap = await getDocs(q);
+    return { ok: true, data: snap.docs.map((item) => item.data()) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при вчитување attachment записи.',
+      status: 'network',
+    };
+  }
+}
+
+export async function savePublishedAttempt(input) {
+  const code = String(input?.code ?? '');
+  if (!CODE_RE.test(code)) {
+    return { ok: false, error: 'Невалиден код.', status: 'invalid' };
+  }
+  if (!isPlainObject(input?.responses) || !isPlainObject(input?.submissionProof)) {
+    return { ok: false, error: 'Невалиден attempt payload.', status: 'invalid' };
+  }
+
+  const attemptId = String(input?.attemptId ?? generateResumeToken(14));
+  try {
+    await setDoc(doc(db, `${attemptsCollectionPath()}/${code}__${attemptId}`), {
+      code,
+      attemptId,
+      responses: input.responses,
+      submissionProof: input.submissionProof,
+      attachments: input.attachments ?? {},
+      createdAt: serverTimestamp(),
+    });
+    return { ok: true, attemptId };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при зачувување attempt.',
+      status: 'network',
+    };
+  }
+}
+
+export async function listPublishedAttempts(code) {
+  if (!CODE_RE.test(String(code ?? ''))) {
+    return { ok: false, error: 'Невалиден код.', status: 'invalid' };
+  }
+
+  try {
+    const q = query(collection(db, attemptsCollectionPath()), where('code', '==', code));
+    const snap = await getDocs(q);
+    return { ok: true, data: snap.docs.map((item) => item.data()) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message ?? 'Грешка при вчитување attempts.',
+      status: 'network',
+    };
   }
 }

@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  parseUploadPath,
   parseTakePath,
   parseTakeQuery,
   parseResumeToken,
+  resolvePublicRoute,
   resolveTakeRoute,
+  buildAttachmentUploadUrl,
   buildTakeUrl,
 } from './route';
 
@@ -82,6 +85,36 @@ describe('resolveTakeRoute', () => {
   });
 });
 
+describe('parseUploadPath', () => {
+  it('parses companion upload route with token params', () => {
+    expect(parseUploadPath('/u/ABC123/q1', '?v=VER12&sig=s123&hash=h123&ts=100')).toEqual({
+      code: 'ABC123',
+      questionId: 'q1',
+      verificationId: 'VER12',
+      signature: 's123',
+      payloadHash: 'h123',
+      submittedAt: 100,
+    });
+  });
+});
+
+describe('resolvePublicRoute', () => {
+  it('returns upload route when upload path is active', () => {
+    expect(resolvePublicRoute({ pathname: '/u/ABC123/q1', search: '?v=VER12' })).toMatchObject({
+      kind: 'upload',
+      code: 'ABC123',
+      questionId: 'q1',
+    });
+  });
+
+  it('returns take route for take links', () => {
+    expect(resolvePublicRoute({ pathname: '/t/ABC123', search: '' })).toEqual({
+      kind: 'take',
+      code: 'ABC123',
+    });
+  });
+});
+
 describe('buildTakeUrl', () => {
   it('joins origin and code', () => {
     expect(buildTakeUrl('ABC123', 'https://makedo.test')).toBe('https://makedo.test/t/ABC123');
@@ -91,5 +124,23 @@ describe('buildTakeUrl', () => {
   });
   it('throws without code', () => {
     expect(() => buildTakeUrl('')).toThrow();
+  });
+});
+
+describe('buildAttachmentUploadUrl', () => {
+  it('builds companion upload URL with query params', () => {
+    expect(
+      buildAttachmentUploadUrl(
+        {
+          code: 'ABC123',
+          questionId: 'q1',
+          verificationId: 'VER12',
+          signature: 'sig',
+          payloadHash: 'hash',
+          submittedAt: 100,
+        },
+        'https://makedo.test'
+      )
+    ).toBe('https://makedo.test/u/ABC123/q1?v=VER12&sig=sig&hash=hash&ts=100');
   });
 });

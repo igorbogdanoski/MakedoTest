@@ -9,6 +9,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
+import { getStorage } from 'firebase/storage';
 
 const databaseURL = import.meta.env.VITE_FIREBASE_DATABASE_URL;
 
@@ -48,3 +49,4 @@ export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const rtdb = getDatabase(firebaseApp);
+export const storage = getStorage(firebaseApp);

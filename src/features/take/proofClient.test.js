@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { requestServerSignedProof } from './proofClient';
+import { requestProofVerification, requestServerSignedProof } from './proofClient';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -33,5 +33,21 @@ describe('requestServerSignedProof', () => {
     await expect(
       requestServerSignedProof({ v: 1, payloadHash: '123', submittedAt: 1 })
     ).rejects.toThrow('Signing key is not configured');
+  });
+
+  it('verifies payload when api returns valid state', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ ok: true, valid: true, verificationId: 'ABC123456789' }),
+      }))
+    );
+
+    const result = await requestProofVerification(
+      { v: 1, payloadHash: '123', submittedAt: 1 },
+      'sig'
+    );
+    expect(result.valid).toBe(true);
   });
 });

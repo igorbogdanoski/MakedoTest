@@ -43,7 +43,7 @@
 - [x] **2.6** PWA + IndexedDB offline mode
 - [x] **2.7** Resume token (продолжи на друг уред): URL `?r=<token>` + Firestore `publishedResumes` save/load + `StudentTake` token UX
 - [x] **2.8** RAG foundation (Google Embeddings 2 via backend proxy): chunking, indexing API, retrieval API, namespace isolation, feature flag rollout
-- [ ] **2.9** Secure submission chain (Macedonian Dugga-grade): server-signed QR proof + attachment integrity + teacher verify endpoint/panel (in progress: signing + verify API + student QR token integration + teacher-controlled math/upload policy + per-question QR-gated handwritten slot)
+- [ ] **2.9** Secure submission chain (Macedonian Dugga-grade): server-signed QR proof + attachment integrity + teacher verify endpoint/panel (in progress: signing + verify API + student QR token integration + teacher-controlled math/upload policy + per-question QR-gated handwritten slot + storage-backed handwritten upload + companion scan-upload route + teacher verify panel)
 
 ### Фаза 3 — Teacher Analytics (1–2 месеци)
 Валута на B2B продажба кон училишта.

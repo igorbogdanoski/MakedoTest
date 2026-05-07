@@ -2,11 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const setDocMock = vi.fn();
 const getDocMock = vi.fn();
+const getDocsMock = vi.fn();
+const onSnapshotMock = vi.fn();
 
 vi.mock('firebase/firestore', () => ({
   doc: (_db, path) => ({ path }),
+  collection: (_db, path) => ({ path }),
+  query: (...parts) => ({ parts }),
+  where: (...args) => ({ where: args }),
   setDoc: (...args) => setDocMock(...args),
   getDoc: (...args) => getDocMock(...args),
+  getDocs: (...args) => getDocsMock(...args),
+  onSnapshot: (...args) => onSnapshotMock(...args),
   serverTimestamp: () => '__ts__',
 }));
 
@@ -16,12 +23,20 @@ vi.mock('../../lib/firebase', () => ({
 }));
 
 import {
+  activateAttachmentSession,
+  createAttachmentSession,
   publishTest,
   loadPublishedTest,
   generateCode,
   generateResumeToken,
+  listPublishedAttempts,
+  listQuestionAttachments,
+  loadAttachmentSession,
+  savePublishedAttempt,
+  saveQuestionAttachmentRecord,
   saveResumeState,
   loadResumeState,
+  subscribeQuestionAttachments,
 } from './publish';
 
 const validTest = {
@@ -35,6 +50,8 @@ const validTest = {
 beforeEach(() => {
   setDocMock.mockReset();
   getDocMock.mockReset();
+  getDocsMock.mockReset();
+  onSnapshotMock.mockReset();
 });
 
 describe('generateCode', () => {
@@ -167,5 +184,93 @@ describe('loadResumeState', () => {
   it('returns invalid for malformed input', async () => {
     const res = await loadResumeState({ code: 'ABC123', resumeToken: 'bad' });
     expect(res).toMatchObject({ ok: false, status: 'invalid' });
+  });
+});
+
+describe('attachment session helpers', () => {
+  it('creates attachment session', async () => {
+    setDocMock.mockResolvedValueOnce(undefined);
+    const res = await createAttachmentSession({
+      code: 'ABC123',
+      questionId: 'q1',
+      verificationId: 'VER12345',
+      payload: { v: 1 },
+    });
+    expect(res).toEqual({ ok: true, verificationId: 'VER12345' });
+  });
+
+  it('activates attachment session', async () => {
+    setDocMock.mockResolvedValueOnce(undefined);
+    const res = await activateAttachmentSession({
+      code: 'ABC123',
+      questionId: 'q1',
+      verificationId: 'VER12345',
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it('loads attachment session when found', async () => {
+    getDocMock.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ verificationId: 'VER12345' }),
+    });
+    const res = await loadAttachmentSession({
+      code: 'ABC123',
+      questionId: 'q1',
+      verificationId: 'VER12345',
+    });
+    expect(res).toEqual({ ok: true, data: { verificationId: 'VER12345' } });
+  });
+});
+
+describe('attachment and attempt records', () => {
+  it('stores question attachment metadata', async () => {
+    setDocMock.mockResolvedValueOnce(undefined);
+    const res = await saveQuestionAttachmentRecord({
+      code: 'ABC123',
+      questionId: 'q1',
+      verificationId: 'VER12345',
+      attachment: { name: 'solution.png' },
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it('stores published attempt', async () => {
+    setDocMock.mockResolvedValueOnce(undefined);
+    const res = await savePublishedAttempt({
+      code: 'ABC123',
+      responses: { q1: 1 },
+      submissionProof: { verificationId: 'SUB123' },
+    });
+    expect(res.ok).toBe(true);
+    expect(res.attemptId).toBeTruthy();
+  });
+
+  it('lists published attempts', async () => {
+    getDocsMock.mockResolvedValueOnce({ docs: [{ data: () => ({ attemptId: 'A1' }) }] });
+    const res = await listPublishedAttempts('ABC123');
+    expect(res).toEqual({ ok: true, data: [{ attemptId: 'A1' }] });
+  });
+
+  it('lists question attachments', async () => {
+    getDocsMock.mockResolvedValueOnce({ docs: [{ data: () => ({ questionId: 'q1' }) }] });
+    const res = await listQuestionAttachments('ABC123');
+    expect(res).toEqual({ ok: true, data: [{ questionId: 'q1' }] });
+  });
+
+  it('subscribes to question attachments', () => {
+    const unsubscribe = vi.fn();
+    onSnapshotMock.mockImplementation((_q, onNext) => {
+      onNext({ docs: [{ data: () => ({ questionId: 'q1', attachment: { name: 'f.png' } }) }] });
+      return unsubscribe;
+    });
+    const onData = vi.fn();
+    const stop = subscribeQuestionAttachments('ABC123', onData);
+    expect(onData).toHaveBeenCalledWith(
+      { q1: { questionId: 'q1', attachment: { name: 'f.png' } } },
+      [{ questionId: 'q1', attachment: { name: 'f.png' } }]
+    );
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });
