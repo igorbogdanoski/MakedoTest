@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
+    "docx": "^9.6.1",
     "firebase": "^10.8.0",
     "lucide-react": "^0.330.0",
     "nanoid": "^5.0.7",

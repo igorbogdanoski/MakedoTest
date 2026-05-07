@@ -55,6 +55,7 @@ import Question from './components/Question';
 import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
 import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
 import { downloadTestPdf } from './features/export/downloadTestPdf.jsx';
+import { downloadTestDocx } from './features/export/docxExport.js';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -907,6 +908,20 @@ const App = () => {
             className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-violet-100 hover:scale-105 transition active:scale-95"
           >
             <FileText size={16} /> PDF
+          </button>
+          <button
+            onClick={() =>
+              downloadTestDocx({
+                title: testInfo.title,
+                subject: testInfo.subject,
+                grade: testInfo.grade,
+                teacher: testInfo.teacher,
+                questions,
+              })
+            }
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-emerald-100 hover:scale-105 transition active:scale-95"
+          >
+            <FileText size={16} /> DOCX
           </button>
           <button
             onClick={() => setView(view === 'editor' ? 'preview' : 'editor')}
