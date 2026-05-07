@@ -44,6 +44,16 @@ describe('domain schema', () => {
     expect(QuestionSchema.safeParse(q).success).toBe(true);
   });
 
+  it('валидира diagram со geogebra embed', () => {
+    const q = {
+      type: 'diagram',
+      text: 'Истражи ја функцијата',
+      embedType: 'geogebra',
+      embedUrl: 'https://www.geogebra.org/m/abc123',
+    };
+    expect(QuestionSchema.safeParse(q).success).toBe(true);
+  });
+
   it('parseQuestionList ја прифаќа AI JSON низата', () => {
     const list = [
       { type: 'multiple', text: 'A?', options: ['x', 'y'], correct: 0 },

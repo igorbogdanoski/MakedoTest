@@ -23,6 +23,11 @@ import {
 import RenderContent from './RenderContent';
 import { queryRag } from '../features/rag/ragClient';
 import { composeRagHintBlock } from '../features/rag/suggestions';
+import {
+  DIAGRAM_EMBED_TYPES,
+  getDiagramEmbedPlaceholder,
+  normalizeDiagramEmbedUrl,
+} from '../features/diagram/embed';
 
 const BLOOM_OPTIONS = [
   { value: 'remember', label: 'Remember' },
@@ -118,6 +123,10 @@ const Question = ({
   let displayNum = (idx + 1).toString();
   if (testInfo.subNumbering && q.subNum) displayNum = q.subNum;
   const isDuplicate = q.text && duplicates.includes(q.text.trim().toLowerCase());
+  const diagramMode = q.embedType || 'image';
+  const diagramInputValue = diagramMode === 'image' ? q.imageUrl || '' : q.embedUrl || '';
+  const diagramEmbedSrc =
+    diagramMode === 'image' ? '' : normalizeDiagramEmbedUrl(diagramMode, q.embedUrl || '');
 
   const fetchRagSuggestions = async () => {
     if (ragState.loading) return;
@@ -1257,33 +1266,63 @@ const Question = ({
           <div className="space-y-6">
             {view === 'editor' ? (
               <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100 w-fit">
+                  {DIAGRAM_EMBED_TYPES.map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() =>
+                        setQuestions(
+                          questions.map((qu) =>
+                            qu.id === q.id
+                              ? {
+                                  ...qu,
+                                  embedType: mode,
+                                  embedUrl:
+                                    mode === 'image' ? qu.embedUrl || '' : qu.embedUrl || '',
+                                }
+                              : qu
+                          )
+                        )
+                      }
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition ${diagramMode === mode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-100 hover:text-indigo-600'}`}
+                    >
+                      {mode === 'image' ? 'Слика' : mode === 'geogebra' ? 'GeoGebra' : 'Desmos'}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex gap-4">
                   <input
-                    placeholder="Линк до слика на дијаграм..."
-                    value={q.imageUrl || ''}
+                    placeholder={getDiagramEmbedPlaceholder(diagramMode)}
+                    value={diagramInputValue}
                     onChange={(e) =>
                       setQuestions(
                         questions.map((qu) =>
-                          qu.id === q.id ? { ...qu, imageUrl: e.target.value } : qu
+                          qu.id === q.id
+                            ? diagramMode === 'image'
+                              ? { ...qu, imageUrl: e.target.value }
+                              : { ...qu, embedUrl: e.target.value }
+                            : qu
                         )
                       )
                     }
                     className="flex-1 bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-100 font-bold"
                   />
-                  <button
-                    onClick={() =>
-                      setQuestions(
-                        questions.map((qu) =>
-                          qu.id === q.id ? { ...qu, showGrid: !qu.showGrid } : qu
+                  {diagramMode === 'image' && (
+                    <button
+                      onClick={() =>
+                        setQuestions(
+                          questions.map((qu) =>
+                            qu.id === q.id ? { ...qu, showGrid: !qu.showGrid } : qu
+                          )
                         )
-                      )
-                    }
-                    className={`px-6 rounded-2xl font-black text-[10px] uppercase transition ${q.showGrid ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-                  >
-                    <Grid3X3 size={16} className="mb-1 mx-auto" /> Коорд. систем
-                  </button>
+                      }
+                      className={`px-6 rounded-2xl font-black text-[10px] uppercase transition ${q.showGrid ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                    >
+                      <Grid3X3 size={16} className="mb-1 mx-auto" /> Коорд. систем
+                    </button>
+                  )}
                 </div>
-                {q.imageUrl && (
+                {diagramMode === 'image' && q.imageUrl && (
                   <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-center gap-3">
                     <AlertCircle size={16} className="text-amber-500" />
                     <p className="text-[10px] font-black uppercase text-amber-600 tracking-tight">
@@ -1291,9 +1330,18 @@ const Question = ({
                     </p>
                   </div>
                 )}
+                {diagramMode !== 'image' && diagramInputValue && !diagramEmbedSrc && (
+                  <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-center gap-3">
+                    <AlertCircle size={16} className="text-red-500" />
+                    <p className="text-[10px] font-black uppercase text-red-600 tracking-tight">
+                      Невалиден {diagramMode === 'geogebra' ? 'GeoGebra' : 'Desmos'} линк.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : null}
-            {(q.imageUrl || q.showGrid) && (
+
+            {diagramMode === 'image' && (q.imageUrl || q.showGrid) && (
               <div
                 onClick={(e) => {
                   if (view !== 'editor' || !q.imageUrl) return;
@@ -1366,48 +1414,65 @@ const Question = ({
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-x-10 gap-y-4 mt-10">
-              {(q.markers || []).map((m, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-3 bg-slate-50/50 rounded-2xl border border-slate-100"
-                >
-                  <span className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black shadow-md">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1">
-                    {view === 'editor' ? (
-                      <input
-                        placeholder="Точен одговор за оваа точка..."
-                        value={m.answer || ''}
-                        onChange={(e) => {
-                          const newMarkers = q.markers.map((marker, idx) =>
-                            idx === i ? { ...marker, answer: e.target.value } : marker
-                          );
-                          setQuestions(
-                            questions.map((qu) =>
-                              qu.id === q.id ? { ...qu, markers: newMarkers } : qu
-                            )
-                          );
-                        }}
-                        className="w-full bg-transparent border-b border-slate-200 outline-none font-bold text-sm focus:border-indigo-400 transition"
-                      />
-                    ) : view === 'answerKey' ? (
-                      <span className="font-black text-indigo-600 underline decoration-indigo-200">
-                        {m.answer}
-                      </span>
-                    ) : (
-                      <div className="border-b-2 border-slate-200 w-full h-6" />
-                    )}
+
+            {diagramMode !== 'image' && diagramEmbedSrc && (
+              <div className="relative border-4 border-slate-900 rounded-[2rem] overflow-hidden bg-white shadow-xl max-w-4xl mx-auto aspect-video">
+                <iframe
+                  src={diagramEmbedSrc}
+                  title={`Interactive ${diagramMode} diagram`}
+                  className="w-full h-full"
+                  loading="lazy"
+                  allow="fullscreen"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+
+            {diagramMode === 'image' && (
+              <div className="grid grid-cols-2 gap-x-10 gap-y-4 mt-10">
+                {(q.markers || []).map((m, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-3 bg-slate-50/50 rounded-2xl border border-slate-100"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black shadow-md">
+                      {i + 1}
+                    </span>
+                    <div className="flex-1">
+                      {view === 'editor' ? (
+                        <input
+                          placeholder="Точен одговор за оваа точка..."
+                          value={m.answer || ''}
+                          onChange={(e) => {
+                            const newMarkers = q.markers.map((marker, idx) =>
+                              idx === i ? { ...marker, answer: e.target.value } : marker
+                            );
+                            setQuestions(
+                              questions.map((qu) =>
+                                qu.id === q.id ? { ...qu, markers: newMarkers } : qu
+                              )
+                            );
+                          }}
+                          className="w-full bg-transparent border-b border-slate-200 outline-none font-bold text-sm focus:border-indigo-400 transition"
+                        />
+                      ) : view === 'answerKey' ? (
+                        <span className="font-black text-indigo-600 underline decoration-indigo-200">
+                          {m.answer}
+                        </span>
+                      ) : (
+                        <div className="border-b-2 border-slate-200 w-full h-6" />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {view === 'editor' && (!q.markers || q.markers.length === 0) && (
-                <div className="col-span-2 text-center p-8 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-bold italic">
-                  Кликнете на сликата погоре за да поставите точки за означување
-                </div>
-              )}
-            </div>
+                ))}
+                {view === 'editor' && (!q.markers || q.markers.length === 0) && (
+                  <div className="col-span-2 text-center p-8 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-bold italic">
+                    Кликнете на сликата погоре за да поставите точки за означување
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

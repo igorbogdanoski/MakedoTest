@@ -126,6 +126,8 @@ export const EssaySchema = z.object({
 export const DiagramSchema = z.object({
   ...baseFields,
   type: z.literal('diagram'),
+  embedType: z.enum(['image', 'geogebra', 'desmos']).optional(),
+  embedUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),
 });
 
