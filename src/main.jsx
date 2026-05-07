@@ -73,6 +73,11 @@ import {
 } from './features/collab/session';
 import { createRtdbCollabChannel } from './features/collab/rtdbTransport';
 import { buildConflictHint, formatLastEditAgeMs } from './features/collab/conflictHints';
+import {
+  getActiveCollaborators,
+  pruneStalePresenceMap,
+  upsertPresenceEntry,
+} from './features/collab/presencePolicy';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -281,12 +286,10 @@ const App = () => {
     [activeTestId, user?.uid]
   );
 
-  const activeCollaborators = useMemo(() => {
-    const now = Date.now();
-    return Object.values(presenceByActor || {}).filter(
-      (p) => p && now - Number(p.lastSeenAt || 0) < 35000
-    );
-  }, [presenceByActor]);
+  const activeCollaborators = useMemo(
+    () => getActiveCollaborators(presenceByActor, Date.now()),
+    [presenceByActor]
+  );
 
   useEffect(() => {
     latestEditorStateRef.current = {
@@ -626,6 +629,8 @@ const App = () => {
     if (!collabEnabled) {
       setCollabSupported(true);
       setPresenceByActor({});
+      setLastRemoteEdit(null);
+      setConflictHint('');
       if (collabChannelRef.current) {
         collabChannelRef.current.close();
         collabChannelRef.current = null;
@@ -637,10 +642,7 @@ const App = () => {
       const presence = parsePresencePayload(payload);
       if (presence) {
         if (presence.actorId === collabActorIdRef.current) return;
-        setPresenceByActor((prev) => ({
-          ...prev,
-          [presence.actorId]: presence,
-        }));
+        setPresenceByActor((prev) => upsertPresenceEntry(prev, presence, Date.now()));
         return;
       }
 
@@ -699,7 +701,7 @@ const App = () => {
           actorId: collabActorIdRef.current,
           onMessage: handleIncomingPayload,
           onPresence: (presenceMap) => {
-            setPresenceByActor(presenceMap || {});
+            setPresenceByActor(pruneStalePresenceMap(presenceMap || {}, Date.now()));
           },
           onError: () => {
             setDuplicateAlert('RTDB sync не е достапен, локален collab fallback е активен.');
@@ -779,6 +781,14 @@ const App = () => {
     const timer = setInterval(publishPresence, 15000);
     return () => clearInterval(timer);
   }, [collabEnabled, collabSessionId, user?.uid, testInfo.teacher]);
+
+  useEffect(() => {
+    if (!collabEnabled) return;
+    const timer = setInterval(() => {
+      setPresenceByActor((prev) => pruneStalePresenceMap(prev, Date.now()));
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [collabEnabled]);
 
   const handlePrint = () => {
     const originalView = view;
