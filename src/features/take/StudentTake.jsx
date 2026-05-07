@@ -18,6 +18,76 @@ import RenderContent from '../../components/RenderContent';
 import { readDraftIndexedDb, removeDraftIndexedDb, writeDraftIndexedDb } from './draftStorage';
 
 const STORAGE_PREFIX = 'makedo:take:';
+const OPEN_RESPONSE_TYPES = new Set(['short-answer', 'fill-blanks', 'essay']);
+
+const MATH_INSERT_TOOLS = [
+  { label: 'sqrt', cmd: '$\\sqrt{}$' },
+  { label: 'frac', cmd: '$\\frac{}{}$' },
+  { label: 'pi', cmd: '$\\pi$' },
+  { label: 'x^2', cmd: '$x^2$' },
+  { label: 'x_n', cmd: '$x_n$' },
+  { label: 'theta', cmd: '$\\theta$' },
+];
+
+function fallbackHash(input) {
+  let h = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    h = (h * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+async function sha256Hex(input) {
+  try {
+    const data = new TextEncoder().encode(input);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return fallbackHash(input);
+  }
+}
+
+async function buildSubmissionProof({ test, code, responses, attachmentByQuestion }) {
+  const submittedAt = Date.now();
+  const attachmentList = Object.entries(attachmentByQuestion || {}).map(([questionId, meta]) => ({
+    questionId,
+    name: meta?.name || '',
+    size: Number(meta?.size || 0),
+    type: meta?.type || 'application/octet-stream',
+    fileHash: meta?.fileHash || '',
+  }));
+
+  const canonicalPayload = JSON.stringify({
+    testId: test?.id || null,
+    code: code || null,
+    submittedAt,
+    responses,
+    attachments: attachmentList,
+  });
+
+  const payloadHash = await sha256Hex(canonicalPayload);
+  const verificationId = payloadHash.slice(0, 12).toUpperCase();
+  const qrPayload = {
+    v: 1,
+    verificationId,
+    payloadHash,
+    submittedAt,
+    testId: test?.id || null,
+    code: code || null,
+  };
+
+  const qrText = JSON.stringify(qrPayload);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
+
+  return {
+    verificationId,
+    payloadHash,
+    submittedAt,
+    qrPayload,
+    qrUrl,
+    attachments: attachmentList,
+  };
+}
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -176,30 +246,137 @@ function ChecklistInput({ q, value, onChange }) {
   );
 }
 
-function ManualInput({ value, onChange, kind }) {
+function ManualInput({ value, onChange, kind, attachment, onAttachmentChange }) {
+  const [mathOpen, setMathOpen] = useState(false);
+
+  const insertMath = (token) => {
+    const current = String(value ?? '');
+    onChange(`${current}${token}`);
+  };
+
   if (kind === 'long') {
     return (
-      <textarea
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        rows={6}
-        className="w-full rounded-md border border-slate-300 p-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-        placeholder="Твојот одговор..."
-      />
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMathOpen((v) => !v)}
+            className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+          >
+            {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
+          </button>
+          <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
+            Прикачи ракопис
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+                const fileHash = await sha256Hex(fingerprint);
+                onAttachmentChange?.({
+                  name: file.name,
+                  size: file.size,
+                  type: file.type || 'application/octet-stream',
+                  lastModified: file.lastModified,
+                  fileHash,
+                });
+              }}
+            />
+          </label>
+          {attachment?.name && (
+            <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
+          )}
+        </div>
+        {mathOpen && (
+          <div className="flex flex-wrap gap-2 rounded-md border border-brand-100 bg-brand-50/40 p-2">
+            {MATH_INSERT_TOOLS.map((tool) => (
+              <button
+                key={tool.label}
+                type="button"
+                onClick={() => insertMath(tool.cmd)}
+                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+              >
+                {tool.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <textarea
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          rows={6}
+          className="w-full rounded-md border border-slate-300 p-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          placeholder="Твојот одговор..."
+        />
+      </div>
     );
   }
   return (
-    <input
-      type="text"
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-md border border-slate-300 p-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-      placeholder="Твојот одговор..."
-    />
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMathOpen((v) => !v)}
+          className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+        >
+          {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
+        </button>
+        <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
+          Прикачи ракопис
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+              const fileHash = await sha256Hex(fingerprint);
+              onAttachmentChange?.({
+                name: file.name,
+                size: file.size,
+                type: file.type || 'application/octet-stream',
+                lastModified: file.lastModified,
+                fileHash,
+              });
+            }}
+          />
+        </label>
+        {attachment?.name && (
+          <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
+        )}
+      </div>
+      {mathOpen && (
+        <div className="flex flex-wrap gap-2 rounded-md border border-brand-100 bg-brand-50/40 p-2">
+          {MATH_INSERT_TOOLS.map((tool) => (
+            <button
+              key={tool.label}
+              type="button"
+              onClick={() => insertMath(tool.cmd)}
+              className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+            >
+              {tool.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <input
+        type="text"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md border border-slate-300 p-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        placeholder="Твојот одговор..."
+      />
+    </div>
   );
 }
 
-function QuestionView({ q, index, value, onChange }) {
+function QuestionView({ q, index, value, onChange, attachment, onAttachmentChange }) {
   if (q.type === 'section') {
     return (
       <h2 className="mt-6 border-l-4 border-brand-500 pl-3 text-xl font-semibold text-ink">
@@ -222,16 +399,39 @@ function QuestionView({ q, index, value, onChange }) {
       {q.type === 'true-false' && <TrueFalseInput q={q} value={value} onChange={onChange} />}
       {q.type === 'checklist' && <ChecklistInput q={q} value={value} onChange={onChange} />}
       {(q.type === 'short-answer' || q.type === 'fill-blanks') && (
-        <ManualInput q={q} value={value} onChange={onChange} kind="short" />
+        <ManualInput
+          q={q}
+          value={value}
+          onChange={onChange}
+          kind="short"
+          attachment={attachment}
+          onAttachmentChange={onAttachmentChange}
+        />
       )}
-      {q.type === 'essay' && <ManualInput q={q} value={value} onChange={onChange} kind="long" />}
+      {q.type === 'essay' && (
+        <ManualInput
+          q={q}
+          value={value}
+          onChange={onChange}
+          kind="long"
+          attachment={attachment}
+          onAttachmentChange={onAttachmentChange}
+        />
+      )}
       {!['multiple', 'true-false', 'checklist', 'short-answer', 'fill-blanks', 'essay'].includes(
         q.type
       ) && (
         <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
           Овој тип задача (<code>{q.type}</code>) е поддржан во полна верзија. MVP примерок
           прикажува само рачно поле.
-          <ManualInput q={q} value={value} onChange={onChange} kind="long" />
+          <ManualInput
+            q={q}
+            value={value}
+            onChange={onChange}
+            kind="long"
+            attachment={attachment}
+            onAttachmentChange={onAttachmentChange}
+          />
         </p>
       )}
     </article>
@@ -248,7 +448,9 @@ export default function StudentTake({
   onSaveResume,
 }) {
   const [responses, setResponses, clearDraft] = useDraft(code, initialResponses);
+  const [attachmentByQuestion, setAttachmentByQuestion] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submissionProof, setSubmissionProof] = useState(null);
   const [resumeToken, setResumeToken] = useState(initialResumeToken);
   const [resumeMessage, setResumeMessage] = useState(null);
 
@@ -264,17 +466,35 @@ export default function StudentTake({
   const answered = useMemo(
     () =>
       test.questions.filter(
-        (q) => q.type !== 'section' && responses[q.id] != null && responses[q.id] !== ''
+        (q) =>
+          q.type !== 'section' &&
+          ((responses[q.id] != null && responses[q.id] !== '') ||
+            (OPEN_RESPONSE_TYPES.has(q.type) && !!attachmentByQuestion[q.id]))
       ).length,
-    [test, responses]
+    [test, responses, attachmentByQuestion]
   );
   const total = test.questions.filter((q) => q.type !== 'section').length;
   const progress = total === 0 ? 0 : Math.round((answered / total) * 100);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const resultNow = gradeTest(test, responses);
+    const proof = await buildSubmissionProof({
+      test,
+      code,
+      responses,
+      attachmentByQuestion,
+    });
+    setSubmissionProof(proof);
     setSubmitted(true);
-    if (onSubmit) onSubmit({ responses, result: gradeTest(test, responses) });
+    if (onSubmit) {
+      onSubmit({
+        responses,
+        result: resultNow,
+        attachments: attachmentByQuestion,
+        submissionProof: proof,
+      });
+    }
   };
 
   const handleSaveResume = async () => {
@@ -315,11 +535,33 @@ export default function StudentTake({
               Дел од прашањата бараат рачно оценување од наставник.
             </p>
           )}
+          {submissionProof && (
+            <div className="mt-4 rounded-md border border-slate-200 bg-white p-3 text-left">
+              <p className="text-xs text-ink-muted">QR верификација</p>
+              <p className="text-sm font-semibold text-ink">
+                Verification ID: {submissionProof.verificationId}
+              </p>
+              <p className="text-xs break-all text-ink-muted">
+                Hash: {submissionProof.payloadHash}
+              </p>
+              <img
+                src={submissionProof.qrUrl}
+                alt="QR код за верификација на предадениот одговор"
+                className="mt-3 h-36 w-36 rounded border border-slate-200"
+              />
+              {submissionProof.attachments.length > 0 && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  Прикачени прилози: {submissionProof.attachments.length}
+                </p>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => {
               clearDraft();
               setSubmitted(false);
+              setSubmissionProof(null);
             }}
             className="btn-ghost mt-6"
           >
@@ -363,6 +605,13 @@ export default function StudentTake({
           index={i}
           value={responses[q.id]}
           onChange={(v) => setResponses((r) => ({ ...r, [q.id]: v }))}
+          attachment={attachmentByQuestion[q.id] || null}
+          onAttachmentChange={(meta) =>
+            setAttachmentByQuestion((prev) => ({
+              ...prev,
+              [q.id]: meta,
+            }))
+          }
         />
       ))}
 

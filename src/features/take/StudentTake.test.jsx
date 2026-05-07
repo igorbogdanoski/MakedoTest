@@ -16,6 +16,12 @@ async function keyboardWithAct(user, keys) {
   });
 }
 
+async function uploadWithAct(user, input, file) {
+  await act(async () => {
+    await user.upload(input, file);
+  });
+}
+
 vi.mock('../../components/RenderContent', () => ({
   default: ({ text }) => <span>{text}</span>,
 }));
@@ -135,6 +141,49 @@ describe('StudentTake', () => {
     await clickWithAct(user, screen.getByLabelText('4'));
     await clickWithAct(user, screen.getByText('Заврши и испрати'));
     expect(await screen.findByText('100%')).toBeInTheDocument();
+  });
+
+  it('manual одговор поддржува математички toolbar', async () => {
+    const user = userEvent.setup();
+    const test = {
+      ...baseTest,
+      questions: [{ id: 'sa1', type: 'short-answer', text: 'Внеси формула', points: 1 }],
+    };
+    render(<StudentTake test={test} />);
+
+    await clickWithAct(user, screen.getByText('Математички едитор'));
+    await clickWithAct(user, screen.getByText('frac'));
+
+    expect(screen.getByPlaceholderText('Твојот одговор...')).toHaveValue('$\\frac{}{}$');
+  });
+
+  it('open прашање поддржува attachment и QR proof по submit', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const test = {
+      ...baseTest,
+      questions: [{ id: 'e1', type: 'essay', text: 'Реши ја задачата', points: 5 }],
+    };
+
+    const { container } = render(<StudentTake test={test} code="HAND1" onSubmit={onSubmit} />);
+    const fileInput = container.querySelector('input[type="file"]');
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(['handwritten'], 'solution.png', { type: 'image/png' });
+    await uploadWithAct(user, fileInput, file);
+
+    expect(await screen.findByText(/Прикачено: solution.png/)).toBeInTheDocument();
+    expect(screen.getByText('1 / 1 одговорени')).toBeInTheDocument();
+
+    await clickWithAct(user, screen.getByText('Заврши и испрати'));
+    expect(await screen.findByText(/Verification ID:/)).toBeInTheDocument();
+    expect(
+      screen.getByAltText('QR код за верификација на предадениот одговор')
+    ).toBeInTheDocument();
+
+    const submitted = onSubmit.mock.calls[0][0];
+    expect(submitted.attachments.e1.name).toBe('solution.png');
+    expect(submitted.submissionProof.verificationId).toBeTruthy();
   });
 });
 
