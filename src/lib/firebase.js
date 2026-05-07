@@ -8,6 +8,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
+
+const databaseURL = import.meta.env.VITE_FIREBASE_DATABASE_URL;
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,14 +19,22 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  ...(databaseURL ? { databaseURL } : {}),
 };
 
 /** Application namespace за Firestore колекциски патеки. */
 export const APP_ID = 'makedo-test-v6-ultimate';
 
-const missing = Object.entries(firebaseConfig)
-  .filter(([, v]) => !v)
-  .map(([k]) => k);
+const requiredKeys = [
+  ['apiKey', firebaseConfig.apiKey],
+  ['authDomain', firebaseConfig.authDomain],
+  ['projectId', firebaseConfig.projectId],
+  ['storageBucket', firebaseConfig.storageBucket],
+  ['messagingSenderId', firebaseConfig.messagingSenderId],
+  ['appId', firebaseConfig.appId],
+];
+
+const missing = requiredKeys.filter(([, v]) => !v).map(([k]) => k);
 
 if (missing.length > 0 && import.meta.env.DEV) {
   // eslint-disable-next-line no-console
@@ -36,3 +47,4 @@ if (missing.length > 0 && import.meta.env.DEV) {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+export const rtdb = getDatabase(firebaseApp);

@@ -4,7 +4,7 @@ import './styles/index.css';
 import { registerSW } from 'virtual:pwa-register';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, onSnapshot, addDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { auth, db, APP_ID } from './lib/firebase';
+import { auth, db, rtdb, APP_ID } from './lib/firebase';
 import { resolveTakeRoute } from './features/take/route';
 import TakeRoute from './features/take/TakeRoute';
 import {
@@ -69,6 +69,7 @@ import {
   createBroadcastCollabChannel,
   parseEditorSyncPayload,
 } from './features/collab/session';
+import { createRtdbCollabChannel } from './features/collab/rtdbTransport';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -101,6 +102,7 @@ const App = () => {
   const [isApplyingUndo, setIsApplyingUndo] = useState(false);
   const [collabEnabled, setCollabEnabled] = useState(true);
   const [collabSupported, setCollabSupported] = useState(true);
+  const [collabTransport, setCollabTransport] = useState('local');
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const lastSnapshotHashRef = useRef('');
@@ -603,7 +605,7 @@ const App = () => {
       return;
     }
 
-    const channel = createBroadcastCollabChannel(collabSessionId, (payload) => {
+    const handleIncomingPayload = (payload) => {
       const parsed = parseEditorSyncPayload(payload);
       if (!parsed) return;
       if (parsed.actorId === collabActorIdRef.current) return;
@@ -623,7 +625,35 @@ const App = () => {
       setActiveTestId(parsed.activeTestId);
       setDuplicateAlert('Синхронизирани промени од колаборативна сесија.');
       setTimeout(() => setDuplicateAlert(null), 1600);
-    });
+    };
+
+    let channel = null;
+    let usingRtdb = false;
+
+    if (user?.uid) {
+      try {
+        channel = createRtdbCollabChannel({
+          database: rtdb,
+          appId,
+          sessionId: collabSessionId,
+          onMessage: handleIncomingPayload,
+          onError: () => {
+            setDuplicateAlert('RTDB sync не е достапен, локален collab fallback е активен.');
+            setTimeout(() => setDuplicateAlert(null), 1800);
+          },
+        });
+        usingRtdb = channel.supported;
+      } catch {
+        usingRtdb = false;
+      }
+    }
+
+    if (!channel || !channel.supported) {
+      channel = createBroadcastCollabChannel(collabSessionId, handleIncomingPayload);
+      setCollabTransport('local');
+    } else {
+      setCollabTransport(usingRtdb ? 'cloud' : 'local');
+    }
 
     collabChannelRef.current = channel;
     setCollabSupported(channel.supported);
@@ -634,7 +664,7 @@ const App = () => {
         collabChannelRef.current = null;
       }
     };
-  }, [collabEnabled, collabSessionId]);
+  }, [collabEnabled, collabSessionId, user?.uid]);
 
   useEffect(() => {
     if (!collabEnabled || !collabChannelRef.current) return;
@@ -1096,7 +1126,9 @@ const App = () => {
             <Library size={16} /> {collabEnabled ? 'Collab ON' : 'Collab OFF'}
           </button>
           <div className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-500">
-            {collabSupported ? `Session ${collabSessionId}` : 'Collab unsupported'}
+            {collabSupported
+              ? `${collabTransport === 'cloud' ? 'RTDB' : 'Local'} • ${collabSessionId}`
+              : 'Collab unsupported'}
           </div>
           <button
             onClick={handlePrint}
