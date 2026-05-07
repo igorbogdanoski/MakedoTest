@@ -56,6 +56,7 @@ import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
 import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
 import { downloadTestPdf } from './features/export/downloadTestPdf.jsx';
 import { downloadTestDocx } from './features/export/docxExport.js';
+import { importQuestionsFromVisionFile } from './features/import-export/vision';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -82,6 +83,7 @@ const App = () => {
   const [showHelp, setShowHelp] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
+  const [isVisionImporting, setIsVisionImporting] = useState(false);
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -534,6 +536,32 @@ const App = () => {
     }
   };
 
+  const handleVisionImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsVisionImporting(true);
+    try {
+      const result = await importQuestionsFromVisionFile(file);
+      if (!result.ok) {
+        alert(result.error || 'Vision import не успеа. Обидете се повторно.');
+        return;
+      }
+
+      const imported = result.data.map((q, i) => ({
+        ...q,
+        id: Date.now() + i,
+      }));
+      setQuestions([...questions, ...imported]);
+      const sourceText = result.source === 'tesseract' ? 'Tesseract fallback' : 'Vision API';
+      setDuplicateAlert(`Увезени ${imported.length} прашања (${sourceText}).`);
+      setTimeout(() => setDuplicateAlert(null), 2200);
+    } finally {
+      setIsVisionImporting(false);
+    }
+  };
+
   const triggerOnEnterOrSpace = (event, callback) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -796,17 +824,19 @@ const App = () => {
             >
               <Sparkles size={12} />
             </button>
-            <button
-              onClick={() =>
-                alert(
-                  'AI Vision Digitization: Оваа функција ќе овозможи скенирање на физички тестови преку камера или слика. Во моментов е во фаза на развој.'
-                )
-              }
+            <label
               title="AI Vision (Скенирај Тест)"
-              className="px-3 py-2 rounded-xl text-slate-400 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1 relative cursor-pointer ${isVisionImporting ? 'text-slate-300 bg-slate-50' : 'text-slate-400 hover:bg-white hover:text-indigo-600'}`}
             >
-              <ImageIcon size={12} />
-            </button>
+              <ImageIcon size={12} /> {isVisionImporting ? 'OCR...' : 'Vision'}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={isVisionImporting}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleVisionImport}
+              />
+            </label>
             <div className="w-px bg-slate-200 mx-1 self-stretch" />
             <button
               title="Извези QTI (XML)"
