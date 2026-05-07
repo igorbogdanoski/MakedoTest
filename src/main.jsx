@@ -609,6 +609,8 @@ const App = () => {
     } else if (type === 'multi-part') {
       baseQ.parts = ['', ''];
     } else if (type === 'diagram') {
+      baseQ.embedType = 'image';
+      baseQ.embedUrl = '';
       baseQ.imageUrl = '';
     }
     setQuestions([...questions, baseQ]);
