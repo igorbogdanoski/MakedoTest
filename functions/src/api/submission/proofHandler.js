@@ -4,7 +4,9 @@ import { validateBody } from '../../middleware/validateBody.js';
 
 const PayloadSchema = z.object({
   v: z.number().int().default(1),
+  scope: z.enum(['submission', 'question-upload']).default('submission'),
   testId: z.string().nullable().optional(),
+  questionId: z.string().nullable().optional(),
   code: z.string().nullable().optional(),
   submittedAt: z.number().int().positive(),
   payloadHash: z.string().min(8).max(128),
@@ -23,7 +25,9 @@ const ProofVerifyRequestSchema = z.object({
 function canonicalPayload(payload) {
   return JSON.stringify({
     v: payload.v ?? 1,
+    scope: payload.scope ?? 'submission',
     testId: payload.testId ?? null,
+    questionId: payload.questionId ?? null,
     code: payload.code ?? null,
     submittedAt: payload.submittedAt,
     payloadHash: payload.payloadHash,
@@ -40,7 +44,9 @@ export function signPayload(payload, signingKey) {
   return {
     payload: {
       v: payload.v ?? 1,
+      scope: payload.scope ?? 'submission',
       testId: payload.testId ?? null,
+      questionId: payload.questionId ?? null,
       code: payload.code ?? null,
       submittedAt: payload.submittedAt,
       payloadHash: payload.payloadHash,

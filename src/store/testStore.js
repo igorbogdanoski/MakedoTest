@@ -12,10 +12,18 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { QuestionSchema, parseQuestionList } from '../domain/schema';
+import { createDefaultResponseConfig } from '../domain/responsePolicy';
 
 /** Креира скелет за нова празна задача од даден тип. */
 export function createBlankQuestion(type) {
-  const base = { id: nanoid(8), type, text: '', points: 1, difficulty: 'medium' };
+  const base = {
+    id: nanoid(8),
+    type,
+    text: '',
+    points: 1,
+    difficulty: 'medium',
+    responseConfig: createDefaultResponseConfig(type),
+  };
   switch (type) {
     case 'multiple':
       return { ...base, options: ['', '', '', ''], correct: 0 };

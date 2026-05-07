@@ -28,6 +28,7 @@ import {
   getDiagramEmbedPlaceholder,
   normalizeDiagramEmbedUrl,
 } from '../features/diagram/embed';
+import { isOpenResponseType, resolveResponseConfig } from '../domain/responsePolicy';
 
 const BLOOM_OPTIONS = [
   { value: 'remember', label: 'Remember' },
@@ -127,6 +128,23 @@ const Question = ({
   const diagramInputValue = diagramMode === 'image' ? q.imageUrl || '' : q.embedUrl || '';
   const diagramEmbedSrc =
     diagramMode === 'image' ? '' : normalizeDiagramEmbedUrl(diagramMode, q.embedUrl || '');
+  const responseConfig = resolveResponseConfig(q);
+
+  const updateResponseConfig = (patch) => {
+    setQuestions(
+      questions.map((qu) =>
+        qu.id === q.id
+          ? {
+              ...qu,
+              responseConfig: {
+                ...resolveResponseConfig(qu),
+                ...patch,
+              },
+            }
+          : qu
+      )
+    );
+  };
 
   const fetchRagSuggestions = async () => {
     if (ragState.loading) return;
@@ -619,6 +637,56 @@ const Question = ({
                   className="flex-1 bg-transparent text-xs font-bold outline-none text-slate-600"
                 />
               </div>
+              {isOpenResponseType(q.type) && (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm space-y-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    Student response policy
+                  </p>
+                  <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <span>Дозволи математички едитор</span>
+                    <input
+                      type="checkbox"
+                      checked={responseConfig.allowMathEditor}
+                      onChange={(e) => updateResponseConfig({ allowMathEditor: e.target.checked })}
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <span>Дозволи ракописно решение</span>
+                    <input
+                      type="checkbox"
+                      checked={responseConfig.allowHandwrittenUpload}
+                      onChange={(e) => {
+                        const allowHandwrittenUpload = e.target.checked;
+                        updateResponseConfig({
+                          allowHandwrittenUpload,
+                          requireQrForAttachment: allowHandwrittenUpload
+                            ? responseConfig.requireQrForAttachment
+                            : false,
+                        });
+                      }}
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <span>Барај QR скенирање пред прикачување</span>
+                    <input
+                      type="checkbox"
+                      checked={
+                        responseConfig.allowHandwrittenUpload &&
+                        responseConfig.requireQrForAttachment
+                      }
+                      disabled={!responseConfig.allowHandwrittenUpload}
+                      onChange={(e) =>
+                        updateResponseConfig({ requireQrForAttachment: e.target.checked })
+                      }
+                    />
+                  </label>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Наставникот контролира дали ученикот смее да внесе математички запис, да прикачи
+                    ракописно решение и дали тоа прикачување мора да се отвори преку QR за
+                    конкретната задача.
+                  </p>
+                </div>
+              )}
               {q.showImage && (
                 <div className="flex flex-col gap-3 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
                   <div className="flex items-center gap-3">
@@ -1556,6 +1624,21 @@ const Question = ({
             {[...Array(q.type === 'essay' ? 10 : 3)].map((_, i) => (
               <div key={i} className="border-b-2 border-slate-100 border-dotted w-full h-10" />
             ))}
+            {(() => {
+              const policy = resolveResponseConfig(q);
+              if (!policy.allowMathEditor && !policy.allowHandwrittenUpload) return null;
+              return (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">
+                  {policy.allowMathEditor && <span>Дозволен е математички едитор. </span>}
+                  {policy.allowHandwrittenUpload && (
+                    <span>
+                      Дозволено е ракописно решение
+                      {policy.requireQrForAttachment ? ' со QR активација.' : '.'}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

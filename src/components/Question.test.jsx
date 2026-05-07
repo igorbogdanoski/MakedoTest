@@ -125,4 +125,29 @@ describe('Question RAG editor flow', () => {
 
     expect(bloomSelect).toHaveValue('analyze');
   });
+
+  it('allows teacher to configure student response policy', async () => {
+    renderQuestionEditor({
+      id: 'q4',
+      type: 'essay',
+      text: 'Објасни ја постапката.',
+      points: 5,
+      responseConfig: {
+        allowMathEditor: true,
+        allowHandwrittenUpload: false,
+        requireQrForAttachment: true,
+      },
+    });
+
+    const uploadToggle = screen.getByLabelText('Дозволи ракописно решение');
+    const qrToggle = screen.getByLabelText('Барај QR скенирање пред прикачување');
+
+    await act(async () => {
+      fireEvent.click(uploadToggle);
+    });
+
+    expect(uploadToggle).toBeChecked();
+    expect(qrToggle).not.toBeDisabled();
+    expect(screen.getByText(/Наставникот контролира/)).toBeInTheDocument();
+  });
 });

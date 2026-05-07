@@ -40,6 +40,13 @@ const baseFields = {
   text: z.string().default(''),
   points: z.number().int().nonnegative().optional(),
   difficulty: z.enum(DIFFICULTY_LEVELS).optional(),
+  responseConfig: z
+    .object({
+      allowMathEditor: z.boolean().optional(),
+      allowHandwrittenUpload: z.boolean().optional(),
+      requireQrForAttachment: z.boolean().optional(),
+    })
+    .optional(),
   fullWidth: z.boolean().optional(),
   qrUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),

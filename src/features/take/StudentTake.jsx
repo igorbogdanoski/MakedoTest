@@ -17,9 +17,9 @@ import { gradeTest, percentageToGrade } from '../grading/grade';
 import RenderContent from '../../components/RenderContent';
 import { readDraftIndexedDb, removeDraftIndexedDb, writeDraftIndexedDb } from './draftStorage';
 import { requestServerSignedProof } from './proofClient';
+import { isOpenResponseType, resolveResponseConfig } from '../../domain/responsePolicy';
 
 const STORAGE_PREFIX = 'makedo:take:';
-const OPEN_RESPONSE_TYPES = new Set(['short-answer', 'fill-blanks', 'essay']);
 
 const MATH_INSERT_TOOLS = [
   { label: 'sqrt', cmd: '$\\sqrt{}$' },
@@ -103,6 +103,51 @@ async function buildSubmissionProof({ test, code, responses, attachmentByQuestio
     attachments: attachmentList,
     signature: token?.signature || null,
     signedBy: token?.signature ? 'server' : 'client-fallback',
+  };
+}
+
+async function buildQuestionUploadGate({ test, code, questionId }) {
+  const issuedAt = Date.now();
+  const payloadHash = await sha256Hex(
+    JSON.stringify({
+      scope: 'question-upload',
+      testId: test?.id || null,
+      questionId,
+      code: code || null,
+      issuedAt,
+    })
+  );
+
+  const payload = {
+    v: 1,
+    scope: 'question-upload',
+    testId: test?.id || null,
+    questionId,
+    code: code || null,
+    submittedAt: issuedAt,
+    payloadHash,
+    attachmentCount: 0,
+  };
+
+  let token = null;
+  try {
+    token = await requestServerSignedProof(payload);
+  } catch {
+    token = null;
+  }
+
+  const verificationId = token?.verificationId || payloadHash.slice(0, 12).toUpperCase();
+  const qrPayload = {
+    ...payload,
+    verificationId,
+    signature: token?.signature || null,
+    signedBy: token?.signature ? 'server' : 'client-fallback',
+  };
+
+  return {
+    ...qrPayload,
+    qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(JSON.stringify(qrPayload))}`,
+    unlocked: false,
   };
 }
 
@@ -263,8 +308,21 @@ function ChecklistInput({ q, value, onChange }) {
   );
 }
 
-function ManualInput({ value, onChange, kind, attachment, onAttachmentChange }) {
+function ManualInput({
+  value,
+  onChange,
+  kind,
+  attachment,
+  onAttachmentChange,
+  allowMathEditor,
+  allowHandwrittenUpload,
+  requireQrForAttachment,
+  uploadGate,
+  onRequestUploadGate,
+  onUnlockUploadGate,
+}) {
   const [mathOpen, setMathOpen] = useState(false);
+  const canUploadNow = allowHandwrittenUpload && (!requireQrForAttachment || uploadGate?.unlocked);
 
   const insertMath = (token) => {
     const current = String(value ?? '');
@@ -275,40 +333,72 @@ function ManualInput({ value, onChange, kind, attachment, onAttachmentChange }) 
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMathOpen((v) => !v)}
-            className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
-          >
-            {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
-          </button>
-          <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
-            Прикачи ракопис
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (!file) return;
-                const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
-                const fileHash = await sha256Hex(fingerprint);
-                onAttachmentChange?.({
-                  name: file.name,
-                  size: file.size,
-                  type: file.type || 'application/octet-stream',
-                  lastModified: file.lastModified,
-                  fileHash,
-                });
-              }}
-            />
-          </label>
+          {allowMathEditor && (
+            <button
+              type="button"
+              onClick={() => setMathOpen((v) => !v)}
+              className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+            >
+              {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
+            </button>
+          )}
+          {allowHandwrittenUpload && requireQrForAttachment && !uploadGate && (
+            <button
+              type="button"
+              onClick={onRequestUploadGate}
+              className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700"
+            >
+              Отвори QR за прикачување
+            </button>
+          )}
+          {allowHandwrittenUpload && canUploadNow && (
+            <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
+              Прикачи ракопис
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+                  const fileHash = await sha256Hex(fingerprint);
+                  onAttachmentChange?.({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type || 'application/octet-stream',
+                    lastModified: file.lastModified,
+                    fileHash,
+                    uploadGateVerificationId: uploadGate?.verificationId || null,
+                  });
+                }}
+              />
+            </label>
+          )}
           {attachment?.name && (
             <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
           )}
         </div>
-        {mathOpen && (
+        {allowHandwrittenUpload && requireQrForAttachment && uploadGate && !uploadGate.unlocked && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 space-y-2">
+            <p className="font-semibold">Скенирај го QR кодот за да се отвори прикачување.</p>
+            <img
+              src={uploadGate.qrUrl}
+              alt="QR код за прикачување решение за оваа задача"
+              className="h-28 w-28 rounded border border-slate-200 bg-white"
+            />
+            <p>Verification ID: {uploadGate.verificationId}</p>
+            <button
+              type="button"
+              onClick={onUnlockUploadGate}
+              className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+            >
+              Го скенирав QR кодот
+            </button>
+          </div>
+        )}
+        {allowMathEditor && mathOpen && (
           <div className="flex flex-wrap gap-2 rounded-md border border-brand-100 bg-brand-50/40 p-2">
             {MATH_INSERT_TOOLS.map((tool) => (
               <button
@@ -335,40 +425,72 @@ function ManualInput({ value, onChange, kind, attachment, onAttachmentChange }) 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setMathOpen((v) => !v)}
-          className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
-        >
-          {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
-        </button>
-        <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
-          Прикачи ракопис
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (!file) return;
-              const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
-              const fileHash = await sha256Hex(fingerprint);
-              onAttachmentChange?.({
-                name: file.name,
-                size: file.size,
-                type: file.type || 'application/octet-stream',
-                lastModified: file.lastModified,
-                fileHash,
-              });
-            }}
-          />
-        </label>
+        {allowMathEditor && (
+          <button
+            type="button"
+            onClick={() => setMathOpen((v) => !v)}
+            className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+          >
+            {mathOpen ? 'Скриј мат алатки' : 'Математички едитор'}
+          </button>
+        )}
+        {allowHandwrittenUpload && requireQrForAttachment && !uploadGate && (
+          <button
+            type="button"
+            onClick={onRequestUploadGate}
+            className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700"
+          >
+            Отвори QR за прикачување
+          </button>
+        )}
+        {allowHandwrittenUpload && canUploadNow && (
+          <label className="cursor-pointer rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700">
+            Прикачи ракопис
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+                const fileHash = await sha256Hex(fingerprint);
+                onAttachmentChange?.({
+                  name: file.name,
+                  size: file.size,
+                  type: file.type || 'application/octet-stream',
+                  lastModified: file.lastModified,
+                  fileHash,
+                  uploadGateVerificationId: uploadGate?.verificationId || null,
+                });
+              }}
+            />
+          </label>
+        )}
         {attachment?.name && (
           <span className="text-xs text-ink-muted">Прикачено: {attachment.name}</span>
         )}
       </div>
-      {mathOpen && (
+      {allowHandwrittenUpload && requireQrForAttachment && uploadGate && !uploadGate.unlocked && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 space-y-2">
+          <p className="font-semibold">Скенирај го QR кодот за да се отвори прикачување.</p>
+          <img
+            src={uploadGate.qrUrl}
+            alt="QR код за прикачување решение за оваа задача"
+            className="h-28 w-28 rounded border border-slate-200 bg-white"
+          />
+          <p>Verification ID: {uploadGate.verificationId}</p>
+          <button
+            type="button"
+            onClick={onUnlockUploadGate}
+            className="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700"
+          >
+            Го скенирав QR кодот
+          </button>
+        </div>
+      )}
+      {allowMathEditor && mathOpen && (
         <div className="flex flex-wrap gap-2 rounded-md border border-brand-100 bg-brand-50/40 p-2">
           {MATH_INSERT_TOOLS.map((tool) => (
             <button
@@ -393,7 +515,19 @@ function ManualInput({ value, onChange, kind, attachment, onAttachmentChange }) 
   );
 }
 
-function QuestionView({ q, index, value, onChange, attachment, onAttachmentChange }) {
+function QuestionView({
+  q,
+  index,
+  value,
+  onChange,
+  attachment,
+  onAttachmentChange,
+  uploadGate,
+  onRequestUploadGate,
+  onUnlockUploadGate,
+}) {
+  const responseConfig = resolveResponseConfig(q);
+
   if (q.type === 'section') {
     return (
       <h2 className="mt-6 border-l-4 border-brand-500 pl-3 text-xl font-semibold text-ink">
@@ -423,6 +557,12 @@ function QuestionView({ q, index, value, onChange, attachment, onAttachmentChang
           kind="short"
           attachment={attachment}
           onAttachmentChange={onAttachmentChange}
+          allowMathEditor={responseConfig.allowMathEditor}
+          allowHandwrittenUpload={responseConfig.allowHandwrittenUpload}
+          requireQrForAttachment={responseConfig.requireQrForAttachment}
+          uploadGate={uploadGate}
+          onRequestUploadGate={onRequestUploadGate}
+          onUnlockUploadGate={onUnlockUploadGate}
         />
       )}
       {q.type === 'essay' && (
@@ -433,6 +573,12 @@ function QuestionView({ q, index, value, onChange, attachment, onAttachmentChang
           kind="long"
           attachment={attachment}
           onAttachmentChange={onAttachmentChange}
+          allowMathEditor={responseConfig.allowMathEditor}
+          allowHandwrittenUpload={responseConfig.allowHandwrittenUpload}
+          requireQrForAttachment={responseConfig.requireQrForAttachment}
+          uploadGate={uploadGate}
+          onRequestUploadGate={onRequestUploadGate}
+          onUnlockUploadGate={onUnlockUploadGate}
         />
       )}
       {!['multiple', 'true-false', 'checklist', 'short-answer', 'fill-blanks', 'essay'].includes(
@@ -448,6 +594,12 @@ function QuestionView({ q, index, value, onChange, attachment, onAttachmentChang
             kind="long"
             attachment={attachment}
             onAttachmentChange={onAttachmentChange}
+            allowMathEditor={responseConfig.allowMathEditor}
+            allowHandwrittenUpload={responseConfig.allowHandwrittenUpload}
+            requireQrForAttachment={responseConfig.requireQrForAttachment}
+            uploadGate={uploadGate}
+            onRequestUploadGate={onRequestUploadGate}
+            onUnlockUploadGate={onUnlockUploadGate}
           />
         </p>
       )}
@@ -466,6 +618,7 @@ export default function StudentTake({
 }) {
   const [responses, setResponses, clearDraft] = useDraft(code, initialResponses);
   const [attachmentByQuestion, setAttachmentByQuestion] = useState({});
+  const [uploadGateByQuestion, setUploadGateByQuestion] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submissionProof, setSubmissionProof] = useState(null);
   const [resumeToken, setResumeToken] = useState(initialResumeToken);
@@ -486,7 +639,9 @@ export default function StudentTake({
         (q) =>
           q.type !== 'section' &&
           ((responses[q.id] != null && responses[q.id] !== '') ||
-            (OPEN_RESPONSE_TYPES.has(q.type) && !!attachmentByQuestion[q.id]))
+            (isOpenResponseType(q.type) &&
+              resolveResponseConfig(q).allowHandwrittenUpload &&
+              !!attachmentByQuestion[q.id]))
       ).length,
     [test, responses, attachmentByQuestion]
   );
@@ -524,6 +679,24 @@ export default function StudentTake({
       return;
     }
     setResumeMessage(save?.error ?? 'Неуспешно зачувување на resume токен.');
+  };
+
+  const handleRequestUploadGate = async (questionId) => {
+    const gate = await buildQuestionUploadGate({ test, code, questionId });
+    setUploadGateByQuestion((prev) => ({
+      ...prev,
+      [questionId]: gate,
+    }));
+  };
+
+  const handleUnlockUploadGate = (questionId) => {
+    setUploadGateByQuestion((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        unlocked: true,
+      },
+    }));
   };
 
   if (submitted && result) {
@@ -582,6 +755,7 @@ export default function StudentTake({
               clearDraft();
               setSubmitted(false);
               setSubmissionProof(null);
+              setUploadGateByQuestion({});
             }}
             className="btn-ghost mt-6"
           >
@@ -626,6 +800,9 @@ export default function StudentTake({
           value={responses[q.id]}
           onChange={(v) => setResponses((r) => ({ ...r, [q.id]: v }))}
           attachment={attachmentByQuestion[q.id] || null}
+          uploadGate={uploadGateByQuestion[q.id] || null}
+          onRequestUploadGate={() => handleRequestUploadGate(q.id)}
+          onUnlockUploadGate={() => handleUnlockUploadGate(q.id)}
           onAttachmentChange={(meta) =>
             setAttachmentByQuestion((prev) => ({
               ...prev,

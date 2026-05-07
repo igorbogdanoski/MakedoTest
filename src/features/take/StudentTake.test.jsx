@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import StudentTake from './StudentTake.jsx';
+import { requestServerSignedProof } from './proofClient';
 
 async function clickWithAct(user, target) {
   await act(async () => {
@@ -26,6 +27,13 @@ vi.mock('../../components/RenderContent', () => ({
   default: ({ text }) => <span>{text}</span>,
 }));
 
+vi.mock('./proofClient', () => ({
+  requestServerSignedProof: vi.fn(async (payload) => ({
+    signature: `sig-${payload.questionId || 'submission'}`,
+    verificationId: (payload.questionId || 'SUBMISSION').toUpperCase().slice(0, 12),
+  })),
+}));
+
 const baseTest = {
   id: 't1',
   title: 'Тест по математика',
@@ -45,6 +53,7 @@ const baseTest = {
 
 beforeEach(() => {
   localStorage.clear();
+  vi.clearAllMocks();
 });
 
 describe('StudentTake', () => {
@@ -147,7 +156,15 @@ describe('StudentTake', () => {
     const user = userEvent.setup();
     const test = {
       ...baseTest,
-      questions: [{ id: 'sa1', type: 'short-answer', text: 'Внеси формула', points: 1 }],
+      questions: [
+        {
+          id: 'sa1',
+          type: 'short-answer',
+          text: 'Внеси формула',
+          points: 1,
+          responseConfig: { allowMathEditor: true },
+        },
+      ],
     };
     render(<StudentTake test={test} />);
 
@@ -157,15 +174,50 @@ describe('StudentTake', () => {
     expect(screen.getByPlaceholderText('Твојот одговор...')).toHaveValue('$\\frac{}{}$');
   });
 
-  it('open прашање поддржува attachment и QR proof по submit', async () => {
+  it('teacher може да го исклучи математичкиот едитор', () => {
+    const test = {
+      ...baseTest,
+      questions: [
+        {
+          id: 'sa2',
+          type: 'short-answer',
+          text: 'Само текст',
+          points: 1,
+          responseConfig: { allowMathEditor: false },
+        },
+      ],
+    };
+    render(<StudentTake test={test} />);
+    expect(screen.queryByText('Математички едитор')).not.toBeInTheDocument();
+  });
+
+  it('open прашање поддржува teacher-enabled QR gated attachment и QR proof по submit', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     const test = {
       ...baseTest,
-      questions: [{ id: 'e1', type: 'essay', text: 'Реши ја задачата', points: 5 }],
+      questions: [
+        {
+          id: 'e1',
+          type: 'essay',
+          text: 'Реши ја задачата',
+          points: 5,
+          responseConfig: {
+            allowMathEditor: true,
+            allowHandwrittenUpload: true,
+            requireQrForAttachment: true,
+          },
+        },
+      ],
     };
 
     const { container } = render(<StudentTake test={test} code="HAND1" onSubmit={onSubmit} />);
+    await clickWithAct(user, screen.getByText('Отвори QR за прикачување'));
+    expect(await screen.findByText(/Скенирај го QR кодот/)).toBeInTheDocument();
+    expect(screen.getByAltText('QR код за прикачување решение за оваа задача')).toBeInTheDocument();
+
+    await clickWithAct(user, screen.getByText('Го скенирав QR кодот'));
+
     const fileInput = container.querySelector('input[type="file"]');
     expect(fileInput).toBeTruthy();
 
@@ -184,6 +236,7 @@ describe('StudentTake', () => {
     const submitted = onSubmit.mock.calls[0][0];
     expect(submitted.attachments.e1.name).toBe('solution.png');
     expect(submitted.submissionProof.verificationId).toBeTruthy();
+    expect(requestServerSignedProof).toHaveBeenCalled();
   });
 });
 

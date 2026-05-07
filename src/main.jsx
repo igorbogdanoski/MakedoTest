@@ -78,6 +78,7 @@ import {
   pruneStalePresenceMap,
   upsertPresenceEntry,
 } from './features/collab/presencePolicy';
+import { createDefaultResponseConfig } from './domain/responsePolicy';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -844,6 +845,7 @@ const App = () => {
       points: 5,
       columns: type === 'multiple' || type === 'checklist' ? 2 : 1,
       difficulty: 'medium',
+      responseConfig: createDefaultResponseConfig(type),
     };
     if (type === 'multiple' || type === 'checklist') {
       baseQ.options = ['', '', ''];

@@ -54,6 +54,19 @@ describe('domain schema', () => {
     expect(QuestionSchema.safeParse(q).success).toBe(true);
   });
 
+  it('валидира response policy за open question', () => {
+    const q = {
+      type: 'essay',
+      text: 'Објасни ја постапката',
+      responseConfig: {
+        allowMathEditor: true,
+        allowHandwrittenUpload: true,
+        requireQrForAttachment: true,
+      },
+    };
+    expect(QuestionSchema.safeParse(q).success).toBe(true);
+  });
+
   it('parseQuestionList ја прифаќа AI JSON низата', () => {
     const list = [
       { type: 'multiple', text: 'A?', options: ['x', 'y'], correct: 0 },

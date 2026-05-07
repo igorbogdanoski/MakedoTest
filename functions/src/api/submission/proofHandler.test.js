@@ -45,4 +45,18 @@ describe('submission proof signing', () => {
     expect(verify.ok).toBe(true);
     expect(verify.valid).toBe(false);
   });
+
+  it('supports question-upload scoped tokens', async () => {
+    const scopedPayload = {
+      ...payload,
+      scope: 'question-upload',
+      questionId: 'q9',
+      attachmentCount: 0,
+    };
+
+    const signed = await handleSignProof({ payload: scopedPayload }, { signingKey: 'secret-key' });
+
+    expect(signed.token.payload.scope).toBe('question-upload');
+    expect(signed.token.payload.questionId).toBe('q9');
+  });
 });
