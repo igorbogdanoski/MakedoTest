@@ -59,7 +59,7 @@
 - [x] **4.2** DOCX извоз преку `docx`
 - [x] **4.3** Vision Import (GPT-4o + Tesseract fallback): хартиен тест → JSON
 - [x] **4.4** GeoGebra/Desmos embed за интерактивни графички задачи
-- [ ] **4.5** Question version history (Firestore subcollections); тест-ниво Undo
+- [x] **4.5** Question version history (Firestore subcollections); тест-ниво Undo
 - [ ] **4.6** Collaborative editing (Yjs + Firestore RTDB)
 - [ ] **4.7** AI Co-author (предлага дистрактори, тежина, време)
 

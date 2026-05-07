@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles/index.css';
 import { registerSW } from 'virtual:pwa-register';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, onSnapshot, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, addDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { auth, db, APP_ID } from './lib/firebase';
 import { resolveTakeRoute } from './features/take/route';
 import TakeRoute from './features/take/TakeRoute';
@@ -57,6 +57,11 @@ import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempt
 import { downloadTestPdf } from './features/export/downloadTestPdf.jsx';
 import { downloadTestDocx } from './features/export/docxExport.js';
 import { importQuestionsFromVisionFile } from './features/import-export/vision';
+import {
+  createEditorSnapshot,
+  pushUndoSnapshot,
+  snapshotHash,
+} from './features/history/editorHistory';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -84,8 +89,13 @@ const App = () => {
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteValue, setPasteValue] = useState('');
   const [isVisionImporting, setIsVisionImporting] = useState(false);
+  const [activeTestId, setActiveTestId] = useState(null);
+  const [undoStack, setUndoStack] = useState([]);
+  const [isApplyingUndo, setIsApplyingUndo] = useState(false);
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const lastSnapshotHashRef = useRef('');
+  const previousSnapshotRef = useRef(null);
 
   const t = useMemo(() => createTranslator(lang), [lang]);
 
@@ -242,6 +252,48 @@ const App = () => {
     const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
     return texts.filter((item, index) => texts.indexOf(item) !== index);
   }, [questions]);
+
+  useEffect(() => {
+    const current = {
+      testInfo,
+      questions,
+      activeTestId,
+    };
+    const currentHash = snapshotHash(current);
+
+    if (!lastSnapshotHashRef.current) {
+      lastSnapshotHashRef.current = currentHash;
+      previousSnapshotRef.current = createEditorSnapshot(current);
+      return;
+    }
+
+    if (currentHash === lastSnapshotHashRef.current) {
+      return;
+    }
+
+    if (!isApplyingUndo && previousSnapshotRef.current) {
+      setUndoStack((prev) => pushUndoSnapshot(prev, previousSnapshotRef.current));
+    }
+
+    previousSnapshotRef.current = createEditorSnapshot(current);
+    lastSnapshotHashRef.current = currentHash;
+
+    if (isApplyingUndo) {
+      setIsApplyingUndo(false);
+    }
+  }, [testInfo, questions, activeTestId, isApplyingUndo]);
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setIsApplyingUndo(true);
+    setTestInfo(last.testInfo);
+    setQuestions(last.questions);
+    setActiveTestId(last.activeTestId || null);
+    setDuplicateAlert('Вратена е претходната верзија на тестот.');
+    setTimeout(() => setDuplicateAlert(null), 1800);
+  };
 
   const questionTypes = useMemo(
     () => [
@@ -626,13 +678,45 @@ const App = () => {
   const saveCurrentTest = async () => {
     if (!user) return;
     setIsSaving(true);
+    const payload = {
+      testInfo,
+      questions,
+      updatedAt: new Date().toISOString(),
+    };
     try {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests'), {
-        testInfo,
-        questions,
-        createdAt: new Date().toISOString(),
-      });
-      setDuplicateAlert('Тестот е зачуван во Вашиот облак!');
+      const testsCollection = collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests');
+      let testId = activeTestId;
+
+      if (testId) {
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'my_tests', testId), payload, {
+          merge: true,
+        });
+      } else {
+        const created = await addDoc(testsCollection, {
+          ...payload,
+          createdAt: new Date().toISOString(),
+        });
+        testId = created.id;
+        setActiveTestId(created.id);
+      }
+
+      await addDoc(
+        collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests', testId, 'versions'),
+        {
+          source: 'manual-save',
+          createdAt: new Date().toISOString(),
+          snapshot: {
+            testInfo,
+            questions,
+          },
+        }
+      );
+
+      setDuplicateAlert(
+        activeTestId
+          ? 'Тестот е ажуриран и архивиран како нова верзија!'
+          : 'Тестот е зачуван во Вашиот облак!'
+      );
     } catch (err) {
       alert('Грешка при зачувување.');
     } finally {
@@ -1157,6 +1241,7 @@ const App = () => {
                           'Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.'
                         )
                       ) {
+                        setActiveTestId(t.id);
                         setQuestions(t.questions);
                         setTestInfo(t.testInfo);
                       }
@@ -1168,6 +1253,7 @@ const App = () => {
                             'Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.'
                           )
                         ) {
+                          setActiveTestId(t.id);
                           setQuestions(t.questions);
                           setTestInfo(t.testInfo);
                         }
@@ -1184,10 +1270,14 @@ const App = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm('Избриши тест?'))
+                          if (window.confirm('Избриши тест?')) {
+                            if (activeTestId === t.id) {
+                              setActiveTestId(null);
+                            }
                             deleteDoc(
                               doc(db, 'artifacts', appId, 'users', user.uid, 'my_tests', t.id)
                             );
+                          }
                         }}
                         className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
                       >
@@ -1200,6 +1290,13 @@ const App = () => {
             </div>
           </div>
         </aside>
+        <button
+          onClick={handleUndo}
+          disabled={undoStack.length === 0}
+          className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${undoStack.length === 0 ? 'bg-slate-100 text-slate-400' : 'bg-white border border-slate-200 text-slate-600 shadow-lg shadow-slate-100 hover:bg-slate-50'}`}
+        >
+          <History size={16} /> Undo
+        </button>
 
         <main className="flex-1 p-12 bg-slate-50/50 flex flex-col items-center">
           <div
