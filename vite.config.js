@@ -37,6 +37,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         navigateFallback: '/index.html',
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB (react-pdf adds ~700 KB)
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

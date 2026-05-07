@@ -54,6 +54,7 @@ import LandingPage from './components/LandingPage';
 import Question from './components/Question';
 import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
 import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
+import { downloadTestPdf } from './features/export/downloadTestPdf.jsx';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -892,6 +893,20 @@ const App = () => {
             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"
           >
             <Printer size={16} /> {t('print')}
+          </button>
+          <button
+            onClick={() =>
+              downloadTestPdf({
+                title: testInfo.title,
+                subject: testInfo.subject,
+                grade: testInfo.grade,
+                questions,
+                lang,
+              })
+            }
+            className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-violet-100 hover:scale-105 transition active:scale-95"
+          >
+            <FileText size={16} /> PDF
           </button>
           <button
             onClick={() => setView(view === 'editor' ? 'preview' : 'editor')}

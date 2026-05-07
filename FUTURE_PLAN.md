@@ -55,7 +55,7 @@
 - [x] **3.6** RAG quality dashboard: retrieval latency, citation coverage, hallucination sampling, teacher feedback loop (interactive feedback controls)
 
 ### Фаза 4 — Authoring 2.0 (паралелно со 2/3)
-- [ ] **4.1** PDF извоз преку `@react-pdf/renderer` (пиксел-перфект, без browser print)
+- [x] **4.1** PDF извоз преку `@react-pdf/renderer` (пиксел-перфект, без browser print)
 - [ ] **4.2** DOCX извоз преку `docx`
 - [ ] **4.3** Vision Import (GPT-4o + Tesseract fallback): хартиен тест → JSON
 - [ ] **4.4** GeoGebra/Desmos embed за интерактивни графички задачи
