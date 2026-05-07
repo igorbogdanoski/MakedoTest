@@ -15,6 +15,7 @@ import express from 'express';
 import cors from 'cors';
 import { indexRouteHandlers } from './api/rag/indexHandler.js';
 import { queryRouteHandlers } from './api/rag/queryHandler.js';
+import { signProofRouteHandlers, verifyProofRouteHandlers } from './api/submission/proofHandler.js';
 
 // Initialise Firebase Admin SDK once at cold-start.
 initializeApp();
@@ -42,6 +43,12 @@ ragRouter.post('/query', ...queryRouteHandlers);
 
 app.use('/api/rag', ragRouter);
 
+const submissionRouter = express.Router();
+submissionRouter.post('/proof', ...signProofRouteHandlers);
+submissionRouter.post('/verify', ...verifyProofRouteHandlers);
+
+app.use('/api/submission', submissionRouter);
+
 // 404 fallback
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Not found' });
@@ -53,7 +60,7 @@ export const api = onRequest(
     timeoutSeconds: 60,
     memory: '512MiB',
     invoker: 'public',
-    secrets: ['GOOGLE_AI_API_KEY', 'GOOGLE_AI_EMBEDDING_MODEL'],
+    secrets: ['GOOGLE_AI_API_KEY', 'GOOGLE_AI_EMBEDDING_MODEL', 'SUBMISSION_SIGNING_KEY'],
   },
   app
 );

@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { gradeTest, percentageToGrade } from '../grading/grade';
 import RenderContent from '../../components/RenderContent';
 import { readDraftIndexedDb, removeDraftIndexedDb, writeDraftIndexedDb } from './draftStorage';
+import { requestServerSignedProof } from './proofClient';
 
 const STORAGE_PREFIX = 'makedo:take:';
 const OPEN_RESPONSE_TYPES = new Set(['short-answer', 'fill-blanks', 'essay']);
@@ -66,14 +67,28 @@ async function buildSubmissionProof({ test, code, responses, attachmentByQuestio
   });
 
   const payloadHash = await sha256Hex(canonicalPayload);
-  const verificationId = payloadHash.slice(0, 12).toUpperCase();
-  const qrPayload = {
+  const basePayload = {
     v: 1,
-    verificationId,
-    payloadHash,
-    submittedAt,
     testId: test?.id || null,
     code: code || null,
+    submittedAt,
+    payloadHash,
+    attachmentCount: attachmentList.length,
+  };
+
+  let token = null;
+  try {
+    token = await requestServerSignedProof(basePayload);
+  } catch {
+    token = null;
+  }
+
+  const verificationId = token?.verificationId || payloadHash.slice(0, 12).toUpperCase();
+  const qrPayload = {
+    ...basePayload,
+    verificationId,
+    signature: token?.signature || null,
+    signedBy: token?.signature ? 'server' : 'client-fallback',
   };
 
   const qrText = JSON.stringify(qrPayload);
@@ -86,6 +101,8 @@ async function buildSubmissionProof({ test, code, responses, attachmentByQuestio
     qrPayload,
     qrUrl,
     attachments: attachmentList,
+    signature: token?.signature || null,
+    signedBy: token?.signature ? 'server' : 'client-fallback',
   };
 }
 
@@ -543,6 +560,9 @@ export default function StudentTake({
               </p>
               <p className="text-xs break-all text-ink-muted">
                 Hash: {submissionProof.payloadHash}
+              </p>
+              <p className="text-xs text-ink-muted">
+                Потпис: {submissionProof.signedBy === 'server' ? 'Server-signed' : 'Fallback'}
               </p>
               <img
                 src={submissionProof.qrUrl}
