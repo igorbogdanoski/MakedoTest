@@ -72,6 +72,7 @@ import {
   parsePresencePayload,
 } from './features/collab/session';
 import { createRtdbCollabChannel } from './features/collab/rtdbTransport';
+import { buildConflictHint, formatLastEditAgeMs } from './features/collab/conflictHints';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -106,6 +107,8 @@ const App = () => {
   const [collabSupported, setCollabSupported] = useState(true);
   const [collabTransport, setCollabTransport] = useState('local');
   const [presenceByActor, setPresenceByActor] = useState({});
+  const [lastRemoteEdit, setLastRemoteEdit] = useState(null);
+  const [conflictHint, setConflictHint] = useState('');
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const lastSnapshotHashRef = useRef('');
@@ -114,6 +117,8 @@ const App = () => {
   const collabActorIdRef = useRef(createActorId());
   const isApplyingRemoteRef = useRef(false);
   const lastCollabHashRef = useRef('');
+  const latestEditorStateRef = useRef({ testInfo: {}, questions: [], activeTestId: null });
+  const presenceByActorRef = useRef({});
 
   const t = useMemo(() => createTranslator(lang), [lang]);
 
@@ -281,6 +286,18 @@ const App = () => {
     return Object.values(presenceByActor || {}).filter(
       (p) => p && now - Number(p.lastSeenAt || 0) < 35000
     );
+  }, [presenceByActor]);
+
+  useEffect(() => {
+    latestEditorStateRef.current = {
+      testInfo,
+      questions,
+      activeTestId,
+    };
+  }, [testInfo, questions, activeTestId]);
+
+  useEffect(() => {
+    presenceByActorRef.current = presenceByActor;
   }, [presenceByActor]);
 
   useEffect(() => {
@@ -631,6 +648,15 @@ const App = () => {
       if (!parsed) return;
       if (parsed.actorId === collabActorIdRef.current) return;
 
+      const localBeforeHash = snapshotHash(latestEditorStateRef.current);
+      const hadLocalDivergence = localBeforeHash !== lastCollabHashRef.current;
+
+      const remoteName =
+        presenceByActorRef.current?.[parsed.actorId]?.displayName ||
+        Object.values(presenceByActorRef.current || {}).find((p) => p?.actorId === parsed.actorId)
+          ?.displayName ||
+        'Колега';
+
       const incomingHash = snapshotHash({
         testInfo: parsed.testInfo,
         questions: parsed.questions,
@@ -644,6 +670,19 @@ const App = () => {
       setTestInfo(parsed.testInfo);
       setQuestions(parsed.questions);
       setActiveTestId(parsed.activeTestId);
+      setLastRemoteEdit({
+        actorId: parsed.actorId,
+        displayName: remoteName,
+        ts: Date.now(),
+      });
+
+      const hint = buildConflictHint({
+        hadLocalDivergence,
+        remoteDisplayName: remoteName,
+      });
+      setConflictHint(hint);
+      setTimeout(() => setConflictHint(''), 4200);
+
       setDuplicateAlert('Синхронизирани промени од колаборативна сесија.');
       setTimeout(() => setDuplicateAlert(null), 1600);
     };
@@ -1192,6 +1231,17 @@ const App = () => {
                   .join(', ')}`
               : ''}
           </div>
+          {lastRemoteEdit && (
+            <div className="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] font-black uppercase text-amber-700 max-w-[250px] truncate">
+              Last edit: {lastRemoteEdit.displayName}{' '}
+              {formatLastEditAgeMs(Date.now() - lastRemoteEdit.ts)}
+            </div>
+          )}
+          {conflictHint && (
+            <div className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-[10px] font-black text-rose-700 max-w-[360px] truncate">
+              {conflictHint}
+            </div>
+          )}
           <button
             onClick={handlePrint}
             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"
