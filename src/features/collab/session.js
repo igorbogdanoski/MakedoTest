@@ -26,6 +26,29 @@ export function buildEditorSyncPayload({ testInfo, questions, activeTestId, acto
   };
 }
 
+export function buildPresencePayload({ actorId, userId, displayName, sessionId }) {
+  return {
+    type: 'presence',
+    actorId,
+    userId: userId || null,
+    displayName: displayName || 'Teacher',
+    sessionId,
+    lastSeenAt: Date.now(),
+  };
+}
+
+export function parsePresencePayload(payload) {
+  if (!payload || payload.type !== 'presence') return null;
+  if (!payload.actorId) return null;
+  return {
+    actorId: payload.actorId,
+    userId: payload.userId || null,
+    displayName: payload.displayName || 'Teacher',
+    sessionId: payload.sessionId || null,
+    lastSeenAt: Number(payload.lastSeenAt || 0),
+  };
+}
+
 export function parseEditorSyncPayload(payload) {
   if (!payload || payload.type !== 'editor-sync') return null;
   if (!payload.data || !payload.data.testInfo || !Array.isArray(payload.data.questions))
@@ -50,6 +73,7 @@ export function createBroadcastCollabChannel(sessionId, onMessage) {
   if (typeof BroadcastChannel === 'undefined') {
     return {
       post: () => {},
+      publishPresence: () => {},
       close: () => {},
       supported: false,
     };
@@ -61,6 +85,7 @@ export function createBroadcastCollabChannel(sessionId, onMessage) {
 
   return {
     post: (payload) => channel.postMessage(payload),
+    publishPresence: (payload) => channel.postMessage(payload),
     close: () => {
       channel.removeEventListener('message', handler);
       channel.close();

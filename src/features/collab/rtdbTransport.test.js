@@ -33,7 +33,7 @@ describe('createRtdbCollabChannel', () => {
     });
 
     expect(ch.supported).toBe(true);
-    expect(dbApi.ref).toHaveBeenCalledOnce();
+    expect(dbApi.ref).toHaveBeenCalledTimes(2);
     expect(onMessage).toHaveBeenCalledWith({ type: 'editor-sync' });
   });
 
@@ -42,6 +42,7 @@ describe('createRtdbCollabChannel', () => {
       ref: vi.fn(() => ({ path: 'x' })),
       set: vi.fn(async () => {}),
       onValue: vi.fn(() => vi.fn()),
+      remove: vi.fn(async () => {}),
     };
 
     const ch = createRtdbCollabChannel({
@@ -56,11 +57,45 @@ describe('createRtdbCollabChannel', () => {
     expect(dbApi.set).toHaveBeenCalledOnce();
   });
 
+  it('publishes and receives presence map', async () => {
+    const onPresence = vi.fn();
+    const dbApi = {
+      ref: vi.fn((db, path) => ({ path })),
+      set: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+      onValue: vi.fn((nodeRef, cb) => {
+        if (String(nodeRef.path).includes('/presence')) {
+          cb({ val: () => ({ actor1: { displayName: 'Teacher A' } }) });
+        } else {
+          cb({ val: () => null });
+        }
+        return vi.fn();
+      }),
+    };
+
+    const ch = createRtdbCollabChannel({
+      database: {},
+      appId: 'app',
+      sessionId: 's1',
+      actorId: 'actor1',
+      onMessage: vi.fn(),
+      onPresence,
+      dbApi,
+    });
+
+    await ch.publishPresence({ type: 'presence', actorId: 'actor1' });
+    expect(onPresence).toHaveBeenCalledWith({ actor1: { displayName: 'Teacher A' } });
+    expect(dbApi.set).toHaveBeenCalled();
+    ch.close();
+    expect(dbApi.remove).toHaveBeenCalled();
+  });
+
   it('calls error callback when listener fails', () => {
     const onError = vi.fn();
     const dbApi = {
       ref: vi.fn(() => ({ path: 'x' })),
       set: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
       onValue: vi.fn((nodeRef, cb, errCb) => {
         errCb(new Error('permission-denied'));
         return vi.fn();

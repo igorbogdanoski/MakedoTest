@@ -65,9 +65,11 @@ import {
 import {
   buildCollabSessionId,
   buildEditorSyncPayload,
+  buildPresencePayload,
   createActorId,
   createBroadcastCollabChannel,
   parseEditorSyncPayload,
+  parsePresencePayload,
 } from './features/collab/session';
 import { createRtdbCollabChannel } from './features/collab/rtdbTransport';
 
@@ -103,6 +105,7 @@ const App = () => {
   const [collabEnabled, setCollabEnabled] = useState(true);
   const [collabSupported, setCollabSupported] = useState(true);
   const [collabTransport, setCollabTransport] = useState('local');
+  const [presenceByActor, setPresenceByActor] = useState({});
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const lastSnapshotHashRef = useRef('');
@@ -272,6 +275,13 @@ const App = () => {
     () => buildCollabSessionId({ activeTestId, userId: user?.uid }),
     [activeTestId, user?.uid]
   );
+
+  const activeCollaborators = useMemo(() => {
+    const now = Date.now();
+    return Object.values(presenceByActor || {}).filter(
+      (p) => p && now - Number(p.lastSeenAt || 0) < 35000
+    );
+  }, [presenceByActor]);
 
   useEffect(() => {
     const current = {
@@ -598,6 +608,7 @@ const App = () => {
   useEffect(() => {
     if (!collabEnabled) {
       setCollabSupported(true);
+      setPresenceByActor({});
       if (collabChannelRef.current) {
         collabChannelRef.current.close();
         collabChannelRef.current = null;
@@ -606,6 +617,16 @@ const App = () => {
     }
 
     const handleIncomingPayload = (payload) => {
+      const presence = parsePresencePayload(payload);
+      if (presence) {
+        if (presence.actorId === collabActorIdRef.current) return;
+        setPresenceByActor((prev) => ({
+          ...prev,
+          [presence.actorId]: presence,
+        }));
+        return;
+      }
+
       const parsed = parseEditorSyncPayload(payload);
       if (!parsed) return;
       if (parsed.actorId === collabActorIdRef.current) return;
@@ -636,7 +657,11 @@ const App = () => {
           database: rtdb,
           appId,
           sessionId: collabSessionId,
+          actorId: collabActorIdRef.current,
           onMessage: handleIncomingPayload,
+          onPresence: (presenceMap) => {
+            setPresenceByActor(presenceMap || {});
+          },
           onError: () => {
             setDuplicateAlert('RTDB sync не е достапен, локален collab fallback е активен.');
             setTimeout(() => setDuplicateAlert(null), 1800);
@@ -687,6 +712,34 @@ const App = () => {
 
     collabChannelRef.current.post(payload);
   }, [collabEnabled, testInfo, questions, activeTestId]);
+
+  useEffect(() => {
+    if (!collabEnabled || !collabChannelRef.current) return;
+
+    const publishPresence = () => {
+      const payload = buildPresencePayload({
+        actorId: collabActorIdRef.current,
+        userId: user?.uid,
+        displayName: testInfo.teacher || 'Teacher',
+        sessionId: collabSessionId,
+      });
+
+      setPresenceByActor((prev) => ({
+        ...prev,
+        [payload.actorId]: payload,
+      }));
+
+      if (typeof collabChannelRef.current.publishPresence === 'function') {
+        collabChannelRef.current.publishPresence(payload);
+      } else {
+        collabChannelRef.current.post(payload);
+      }
+    };
+
+    publishPresence();
+    const timer = setInterval(publishPresence, 15000);
+    return () => clearInterval(timer);
+  }, [collabEnabled, collabSessionId, user?.uid, testInfo.teacher]);
 
   const handlePrint = () => {
     const originalView = view;
@@ -1129,6 +1182,15 @@ const App = () => {
             {collabSupported
               ? `${collabTransport === 'cloud' ? 'RTDB' : 'Local'} • ${collabSessionId}`
               : 'Collab unsupported'}
+          </div>
+          <div className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-500 max-w-[220px] truncate">
+            Online {activeCollaborators.length}
+            {activeCollaborators.length > 0
+              ? ` • ${activeCollaborators
+                  .slice(0, 2)
+                  .map((p) => p.displayName || 'Teacher')
+                  .join(', ')}`
+              : ''}
           </div>
           <button
             onClick={handlePrint}
