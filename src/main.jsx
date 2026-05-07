@@ -62,6 +62,13 @@ import {
   pushUndoSnapshot,
   snapshotHash,
 } from './features/history/editorHistory';
+import {
+  buildCollabSessionId,
+  buildEditorSyncPayload,
+  createActorId,
+  createBroadcastCollabChannel,
+  parseEditorSyncPayload,
+} from './features/collab/session';
 
 // i18n
 import { createTranslator } from './i18n';
@@ -92,10 +99,16 @@ const App = () => {
   const [activeTestId, setActiveTestId] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [isApplyingUndo, setIsApplyingUndo] = useState(false);
+  const [collabEnabled, setCollabEnabled] = useState(true);
+  const [collabSupported, setCollabSupported] = useState(true);
   const [lang, setLang] = useState('mk');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const lastSnapshotHashRef = useRef('');
   const previousSnapshotRef = useRef(null);
+  const collabChannelRef = useRef(null);
+  const collabActorIdRef = useRef(createActorId());
+  const isApplyingRemoteRef = useRef(false);
+  const lastCollabHashRef = useRef('');
 
   const t = useMemo(() => createTranslator(lang), [lang]);
 
@@ -252,6 +265,11 @@ const App = () => {
     const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
     return texts.filter((item, index) => texts.indexOf(item) !== index);
   }, [questions]);
+
+  const collabSessionId = useMemo(
+    () => buildCollabSessionId({ activeTestId, userId: user?.uid }),
+    [activeTestId, user?.uid]
+  );
 
   useEffect(() => {
     const current = {
@@ -574,6 +592,71 @@ const App = () => {
     const timer = setInterval(() => setDemoStep((p) => (p + 1) % 3), 4000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!collabEnabled) {
+      setCollabSupported(true);
+      if (collabChannelRef.current) {
+        collabChannelRef.current.close();
+        collabChannelRef.current = null;
+      }
+      return;
+    }
+
+    const channel = createBroadcastCollabChannel(collabSessionId, (payload) => {
+      const parsed = parseEditorSyncPayload(payload);
+      if (!parsed) return;
+      if (parsed.actorId === collabActorIdRef.current) return;
+
+      const incomingHash = snapshotHash({
+        testInfo: parsed.testInfo,
+        questions: parsed.questions,
+        activeTestId: parsed.activeTestId,
+      });
+
+      if (incomingHash === lastCollabHashRef.current) return;
+
+      isApplyingRemoteRef.current = true;
+      lastCollabHashRef.current = incomingHash;
+      setTestInfo(parsed.testInfo);
+      setQuestions(parsed.questions);
+      setActiveTestId(parsed.activeTestId);
+      setDuplicateAlert('Синхронизирани промени од колаборативна сесија.');
+      setTimeout(() => setDuplicateAlert(null), 1600);
+    });
+
+    collabChannelRef.current = channel;
+    setCollabSupported(channel.supported);
+
+    return () => {
+      if (collabChannelRef.current) {
+        collabChannelRef.current.close();
+        collabChannelRef.current = null;
+      }
+    };
+  }, [collabEnabled, collabSessionId]);
+
+  useEffect(() => {
+    if (!collabEnabled || !collabChannelRef.current) return;
+
+    if (isApplyingRemoteRef.current) {
+      isApplyingRemoteRef.current = false;
+      return;
+    }
+
+    const payload = buildEditorSyncPayload({
+      actorId: collabActorIdRef.current,
+      activeTestId,
+      testInfo,
+      questions,
+    });
+
+    const localHash = snapshotHash({ testInfo, questions, activeTestId });
+    if (localHash === lastCollabHashRef.current) return;
+    lastCollabHashRef.current = localHash;
+
+    collabChannelRef.current.post(payload);
+  }, [collabEnabled, testInfo, questions, activeTestId]);
 
   const handlePrint = () => {
     const originalView = view;
@@ -1005,6 +1088,16 @@ const App = () => {
             <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} />{' '}
             {isSaving ? t('saving') : t('saveTest')}
           </button>
+          <button
+            onClick={() => setCollabEnabled((prev) => !prev)}
+            className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${collabEnabled ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+            title={`Сесија: ${collabSessionId}`}
+          >
+            <Library size={16} /> {collabEnabled ? 'Collab ON' : 'Collab OFF'}
+          </button>
+          <div className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-500">
+            {collabSupported ? `Session ${collabSessionId}` : 'Collab unsupported'}
+          </div>
           <button
             onClick={handlePrint}
             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-indigo-100 hover:scale-105 transition active:scale-95"
