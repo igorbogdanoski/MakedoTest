@@ -135,6 +135,11 @@ import {
   shouldShowSubjectIndicator,
 } from './features/editor/toolboxIndicators';
 import { getTutorialStepHighlightClass } from './features/editor/tutorialHighlights';
+import {
+  getTutorialNextButtonLabel,
+  getTutorialProgressDotClass,
+  shouldAdvanceTutorialStep,
+} from './features/editor/tutorialUi';
 import { TUTORIAL_STEPS } from './features/editor/tutorialConfig';
 import { createDefaultResponseConfig } from './domain/responsePolicy';
 import TeacherVerifyPanel from './features/take/TeacherVerifyPanel';
@@ -812,19 +817,19 @@ const App = () => {
                   {tutorialSteps.map((_, i) => (
                     <div
                       key={i}
-                      className={`h-2 rounded-full transition-all duration-300 ${i === tutorialStep ? 'w-10 bg-indigo-600' : 'w-2 bg-slate-200'}`}
+                      className={`h-2 rounded-full transition-all duration-300 ${getTutorialProgressDotClass(i, tutorialStep)}`}
                     ></div>
                   ))}
                 </div>
                 <button
                   onClick={() =>
-                    tutorialStep < tutorialSteps.length - 1
+                    shouldAdvanceTutorialStep(tutorialStep, tutorialSteps.length)
                       ? setTutorialStep((s) => s + 1)
                       : setShowTutorial(false)
                   }
                   className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-600 transition"
                 >
-                  {tutorialStep < tutorialSteps.length - 1 ? 'Следно' : 'Започни'}
+                  {getTutorialNextButtonLabel(tutorialStep, tutorialSteps.length)}
                 </button>
               </div>
             </div>
