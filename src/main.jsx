@@ -83,6 +83,10 @@ import {
   getCollabToggleButtonClass,
   getLanguageToggleButtonClass,
   getSaveButtonClass,
+  getSaveButtonIconClass,
+  getSaveButtonLabel,
+  getVisionImportButtonClass,
+  getVisionImportButtonLabel,
 } from './features/editor/actionButtons';
 import { getSidebarContainerClass, getSidebarContentClass } from './features/editor/sidebarState';
 import { getEditorToggleIconType, getEditorToggleLabel } from './features/editor/editorToggle';
@@ -924,9 +928,9 @@ const App = () => {
             </button>
             <label
               title="AI Vision (Скенирај Тест)"
-              className={`px-3 py-2 rounded-xl transition flex items-center gap-1 relative cursor-pointer ${isVisionImporting ? 'text-slate-300 bg-slate-50' : 'text-slate-400 hover:bg-white hover:text-indigo-600'}`}
+              className={getVisionImportButtonClass(isVisionImporting)}
             >
-              <ImageIcon size={12} /> {isVisionImporting ? 'OCR...' : 'Vision'}
+              <ImageIcon size={12} /> {getVisionImportButtonLabel(isVisionImporting)}
               <input
                 type="file"
                 accept="image/*"
@@ -1014,8 +1018,8 @@ const App = () => {
             disabled={isSaving}
             className={getSaveButtonClass(isSaving)}
           >
-            <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} />{' '}
-            {isSaving ? t('saving') : t('saveTest')}
+            <Cloud className={getSaveButtonIconClass(isSaving)} size={16} />{' '}
+            {getSaveButtonLabel(isSaving, t)}
           </button>
           <button
             onClick={() => setCollabEnabled((prev) => !prev)}

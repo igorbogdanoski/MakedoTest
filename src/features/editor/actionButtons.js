@@ -7,6 +7,13 @@ const SAVE_BUTTON_BASE_CLASS =
 const SAVE_BUTTON_SAVING_CLASS = 'bg-slate-100 text-slate-400';
 const SAVE_BUTTON_IDLE_CLASS =
   'bg-white border border-indigo-200 text-indigo-600 shadow-lg shadow-indigo-50 hover:bg-indigo-50';
+const SAVE_BUTTON_ICON_SAVING_CLASS = 'animate-bounce';
+const SAVE_BUTTON_ICON_IDLE_CLASS = '';
+
+const VISION_IMPORT_BASE_CLASS =
+  'px-3 py-2 rounded-xl transition flex items-center gap-1 relative cursor-pointer';
+const VISION_IMPORT_BUSY_CLASS = 'text-slate-300 bg-slate-50';
+const VISION_IMPORT_IDLE_CLASS = 'text-slate-400 hover:bg-white hover:text-indigo-600';
 
 const COLLAB_BUTTON_BASE_CLASS =
   'px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition';
@@ -21,6 +28,23 @@ export function getLanguageToggleButtonClass(isActive) {
 
 export function getSaveButtonClass(isSaving) {
   return `${SAVE_BUTTON_BASE_CLASS} ${isSaving ? SAVE_BUTTON_SAVING_CLASS : SAVE_BUTTON_IDLE_CLASS}`;
+}
+
+export function getSaveButtonIconClass(isSaving) {
+  return isSaving ? SAVE_BUTTON_ICON_SAVING_CLASS : SAVE_BUTTON_ICON_IDLE_CLASS;
+}
+
+export function getSaveButtonLabel(isSaving, t) {
+  const key = isSaving ? 'saving' : 'saveTest';
+  return typeof t === 'function' ? t(key) : key;
+}
+
+export function getVisionImportButtonClass(isVisionImporting) {
+  return `${VISION_IMPORT_BASE_CLASS} ${isVisionImporting ? VISION_IMPORT_BUSY_CLASS : VISION_IMPORT_IDLE_CLASS}`;
+}
+
+export function getVisionImportButtonLabel(isVisionImporting) {
+  return isVisionImporting ? 'OCR...' : 'Vision';
 }
 
 export function getCollabToggleButtonClass(isEnabled) {
