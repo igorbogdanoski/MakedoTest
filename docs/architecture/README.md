@@ -7,7 +7,7 @@ Decision Records (ADR) — секоја одлука е нумерирана и 
 
 ## Слоеви
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │  UI / Routes                                 │  src/main.jsx, src/components, src/features/*/UI
 ├──────────────────────────────────────────────┤
@@ -20,6 +20,7 @@ Decision Records (ADR) — секоја одлука е нумерирана и 
 ```
 
 **Правила:**
+
 - UI може да повикува State и Domain. Никогаш директно Adapters (освен преку hooks).
 - State може да повика Domain. Никогаш UI.
 - Domain е PURE — без Firebase, без localStorage, без I/O.

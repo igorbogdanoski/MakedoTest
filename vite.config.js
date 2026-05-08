@@ -67,6 +67,66 @@ export default defineConfig({
   ],
   build: {
     chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.split('\\').join('/');
+
+          if (normalizedId.includes('/node_modules/')) {
+            if (
+              normalizedId.includes('/react/') ||
+              normalizedId.includes('/react-dom/') ||
+              normalizedId.includes('/scheduler/') ||
+              normalizedId.includes('/use-sync-external-store/')
+            ) {
+              return 'vendor-react';
+            }
+            if (normalizedId.includes('/firebase/')) {
+              return 'vendor-firebase';
+            }
+            if (normalizedId.includes('/docx/')) {
+              return 'vendor-docx';
+            }
+            if (normalizedId.includes('/@react-pdf/renderer/')) {
+              return 'vendor-pdf-renderer';
+            }
+            if (
+              normalizedId.includes('/@react-pdf/') ||
+              normalizedId.includes('/pdfkit/') ||
+              normalizedId.includes('/fontkit/') ||
+              normalizedId.includes('/restructure/') ||
+              normalizedId.includes('/unicode-properties/')
+            ) {
+              return 'vendor-pdf-core';
+            }
+            if (normalizedId.includes('/yjs/')) {
+              return 'vendor-collab';
+            }
+            if (normalizedId.includes('/tesseract.js/')) {
+              return 'vendor-vision';
+            }
+            if (normalizedId.includes('/lucide-react/')) {
+              return 'vendor-icons';
+            }
+            if (normalizedId.includes('/zod/')) {
+              return 'vendor-zod';
+            }
+            if (normalizedId.includes('/zustand/')) {
+              return 'vendor-state';
+            }
+            if (normalizedId.includes('/nanoid/')) {
+              return 'vendor-utils';
+            }
+          }
+
+          if (normalizedId.includes('/src/features/take/')) return 'feature-take';
+          if (normalizedId.includes('/src/features/analytics/')) return 'feature-analytics';
+          if (normalizedId.includes('/src/features/collab/')) return 'feature-collab';
+          if (normalizedId.includes('/src/features/export/')) return 'feature-export';
+          if (normalizedId.includes('/src/features/editor/')) return 'feature-editor';
+        },
+      },
+    },
   },
   test: {
     globals: true,

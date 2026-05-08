@@ -15,18 +15,7 @@ import {
   Eye,
   Settings,
   Layout,
-  Type,
-  CheckSquare,
-  Split,
   ListOrdered,
-  HelpCircle,
-  Minus,
-  List as ListIcon,
-  Table as TableIcon,
-  Grid3X3,
-  Layers,
-  CircleDot,
-  CheckCircle2,
   ImageIcon,
   FileText,
   Shuffle,
@@ -41,7 +30,6 @@ import {
   Share2,
   Search,
   X,
-  AlignJustify,
   Hash,
   Target,
   Library,
@@ -55,8 +43,6 @@ import LandingPage from './components/LandingPage';
 import Question from './components/Question';
 import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
 import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
-import { downloadTestPdf } from './features/export/downloadTestPdf.jsx';
-import { downloadTestDocx } from './features/export/docxExport.js';
 import { importQuestionsFromVisionFile } from './features/import-export/vision';
 import {
   createEditorSnapshot,
@@ -72,6 +58,11 @@ import {
   parseEditorSyncPayload,
   parsePresencePayload,
 } from './features/collab/session';
+import {
+  buildCollabStatusBadgeText,
+  buildLastEditBadgeText,
+  buildOnlineCollaboratorsBadgeText,
+} from './features/collab/statusBadges';
 import { createRtdbCollabChannel } from './features/collab/rtdbTransport';
 import { buildConflictHint, formatLastEditAgeMs } from './features/collab/conflictHints';
 import {
@@ -79,6 +70,67 @@ import {
   pruneStalePresenceMap,
   upsertPresenceEntry,
 } from './features/collab/presencePolicy';
+import {
+  getAnswerSheetOptionLabels,
+  shouldRenderAnswerSheetOptions,
+} from './features/editor/answerSheet';
+import {
+  getAdvancedToggleButtonClass,
+  getLayoutToggleLabel,
+  getNextLayout,
+} from './features/editor/advancedSettings';
+import {
+  getCollabToggleButtonClass,
+  getLanguageToggleButtonClass,
+  getSaveButtonClass,
+} from './features/editor/actionButtons';
+import { getSidebarContainerClass, getSidebarContentClass } from './features/editor/sidebarState';
+import { getEditorToggleIconType, getEditorToggleLabel } from './features/editor/editorToggle';
+import { shouldShowAddQuestionFAB } from './features/editor/fabState';
+import {
+  shouldShowDuplicateAlert,
+  shouldShowLastEditBadge,
+  shouldShowConflictHint,
+} from './features/editor/alertVisibility';
+import { shouldShowPasteModal, shouldShowTutorialModal } from './features/editor/modalVisibility';
+import {
+  shouldShowTestFormFields,
+  shouldShowStudentLineFields,
+} from './features/editor/viewDeterminants';
+import {
+  shouldShowGradingScale,
+  shouldShowSmartBadge,
+  getSmartBadgeText,
+} from './features/editor/paperDisplay';
+import {
+  getPaperPanelType,
+  isAnalyticsPanelType,
+  isVerifyPanelType,
+  isAnswerSheetPanelType,
+} from './features/editor/panelTypes';
+import {
+  buildCategoryIcons,
+  CATEGORY_FILTERS,
+  TOOLBOX_CATEGORY_ORDER,
+} from './features/editor/categoryConfig';
+import { buildFilteredQuestionTypes } from './features/editor/filterTypes';
+import { getGradingScaleGradesForDisplay } from './features/editor/gradingScale';
+import { HELP_CONTENT } from './features/editor/helpContent';
+import {
+  getNavViewButtonClass,
+  getNavViewLabel,
+  NAV_VIEW_TABS,
+} from './features/editor/navViewTabs';
+import {
+  determinePaperContentView,
+  getPaperContentContainerClass,
+} from './features/editor/viewMode';
+import { buildQuestionTypes } from './features/editor/questionTypeConfig';
+import { buildQuestionSections } from './features/editor/sectionLayout';
+import { getSectionGridClass, getSectionItemSpanClass } from './features/editor/sectionGrid';
+import { buildToolboxSections } from './features/editor/toolboxSections';
+import { getTutorialStepHighlightClass } from './features/editor/tutorialHighlights';
+import { TUTORIAL_STEPS } from './features/editor/tutorialConfig';
 import { createDefaultResponseConfig } from './domain/responsePolicy';
 import TeacherVerifyPanel from './features/take/TeacherVerifyPanel';
 
@@ -86,6 +138,23 @@ import TeacherVerifyPanel from './features/take/TeacherVerifyPanel';
 import { createTranslator } from './i18n';
 
 const appId = APP_ID;
+
+let pdfExportLoader = null;
+let docxExportLoader = null;
+
+function loadPdfExporter() {
+  if (!pdfExportLoader) {
+    pdfExportLoader = import('./features/export/downloadTestPdf.jsx');
+  }
+  return pdfExportLoader;
+}
+
+function loadDocxExporter() {
+  if (!docxExportLoader) {
+    docxExportLoader = import('./features/export/docxExport.js');
+  }
+  return docxExportLoader;
+}
 
 registerSW({
   immediate: true,
@@ -130,86 +199,7 @@ const App = () => {
 
   const t = useMemo(() => createTranslator(lang), [lang]);
 
-  const helpContent = {
-    multiple: {
-      desc: 'Најчест формат за брза проверка на знаењето со еден точен одговор.',
-      use: 'Идеално за дефиниции, години, имиња или математички резултати.',
-      example: 'Која планета е позната како „Црвената планета“? (Марс, Венера, Јупитер)',
-      tip: 'Кликнете на кругот до одговорот за да го означите како точен за „Клучот“.',
-    },
-    'true-false': {
-      desc: 'Едноставен избор помеѓу две спротивставени тврдења.',
-      use: 'За проверка на фактичка точност или препознавање на заблуди.',
-      example: 'Сонцето е планета. (Точно / Неточно)',
-      tip: 'Користете го копчето со стрелки во едиторот за да го смените распоредот од хоризонтален во вертикален.',
-    },
-    'fill-blanks': {
-      desc: 'Текст каде ученикот треба сам да го допише зборот што недостасува.',
-      use: 'За проверка на меморија на клучни поими во контекст на реченица.',
-      example: 'Процесот во кој растенијата создаваат храна се нарекува [фотосинтеза].',
-      tip: 'Зборот што го сакате како празно место ставете го во средни загради [ ].',
-    },
-    selection: {
-      desc: 'Инлајн верзија на повеќекратен избор директно во реченицата.',
-      use: 'За граматички вежби (избор на времиња) или логички избори во текст.',
-      example: 'Водата врие на {100|0|50} степени Целзиусови.',
-      tip: 'Користете {точен|погрешен|погрешен}. Првиот збор е секогаш точниот одговор.',
-    },
-    'multi-match': {
-      desc: 'Напредно поврзување каде една вредност од десно може да одговара на повеќе од лево.',
-      use: 'За класификација на поими во категории.',
-      example: 'Лав -> Цицач, Орел -> Птица, Делфин -> Цицач.',
-      tip: 'Додајте редови и внесете го парот. Системот автоматски ќе ги измеша за ученикот.',
-    },
-    table: {
-      desc: 'Табеларен приказ за организирани податоци.',
-      use: 'За физички/хемиски мерења, хронологија или споредби.',
-      example: 'Табела со елементи и нивните атомски броеви.',
-      tip: 'Кликнете на иконата со штиклирање во аголот на секоја келија за да ја претворите во поле за одговор.',
-    },
-    checklist: {
-      desc: 'Задача со повеќе точни одговори од понудените.',
-      use: 'За комплексни прашања каде треба да се изберат сите карактеристики на некој поим.',
-      example: 'Кои од следниве се цицачи? (Кит, Куче, Жаба, Човек)',
-      tip: 'Можете да означите неограничен број точни одговори со кликање на квадратчињата.',
-    },
-    ordering: {
-      desc: 'Подредување на поими по хронолошки или логички редослед.',
-      use: 'За историски настани, чекори во експеримент или фази на развој.',
-      example: 'Подреди ги фазите на развој на пеперутка: (Јајце, Гасеница, Кукла, Пеперутка)',
-      tip: 'Внесете ги поимите во правилен редослед, а системот ќе ги прикаже со празни места за бројки.',
-    },
-    'short-answer': {
-      desc: 'Задачи кои бараат неколку зборови или една реченица како одговор.',
-      use: 'За дефиниции или кратки објаснувања.',
-      example: 'Што е фотосинтеза?',
-      tip: 'Можете да додадете линии за пишување во поставките на задачата.',
-    },
-    essay: {
-      desc: 'За подолги одговори и критичко размислување.',
-      use: 'За анализи, раскази или есеи.',
-      example: 'Опиши го значењето на Илинденското востание.',
-      tip: 'Прилагодете ја висината на просторот за пишување за да одговара на очекуваната должина.',
-    },
-    matching: {
-      desc: 'Поврзување на два поими во парови 1-на-1.',
-      use: 'За термини и дефиниции, држави и главни градови.',
-      example: 'Македонија - Скопје, Германија - Берлин.',
-      tip: 'Системот автоматски ќе ги измеша левата и десната колона.',
-    },
-    'multi-part': {
-      desc: 'Комплексна задача поделена на неколку под-прашања (а, б, в).',
-      use: 'За математички проблеми со повеќе чекори или анализа на текст.',
-      example: 'Задача 1: а) Пресметај го х; б) Нацртај го графикот.',
-      tip: 'Можете да доделите посебни бодови за секој дел.',
-    },
-    diagram: {
-      desc: 'Визуелна задача каде се бара означување на слика, дијаграм или геометриско тело.',
-      use: 'За анатомија, географија (карти), физика или стереометрија (3D тела).',
-      example: 'Означи ги темената на дадениот конус.',
-      tip: 'Користете го „Координатниот систем“ за задачи по аналитичка геометрија.',
-    },
-  };
+  const helpContent = HELP_CONTENT;
 
   const [testInfo, setTestInfo] = useState({
     schoolType: 'ООУ',
@@ -348,230 +338,31 @@ const App = () => {
     setTimeout(() => setDuplicateAlert(null), 1800);
   };
 
-  const questionTypes = useMemo(
-    () => [
-      {
-        id: 'multiple',
-        label: 'Понудени одговори',
-        icon: <CheckSquare size={16} />,
-        cat: 'базични',
-        subjects: ['all'],
-        priority: 10,
-      },
-      {
-        id: 'true-false',
-        label: 'Точно/Неточно',
-        icon: <HelpCircle size={16} />,
-        cat: 'базични',
-        subjects: ['all'],
-        priority: 9,
-      },
-      {
-        id: 'fill-blanks',
-        label: 'Пополни празнини',
-        icon: <Minus size={16} />,
-        cat: 'текстуални',
-        subjects: ['languages', 'history'],
-        priority: 8,
-      },
-      {
-        id: 'selection',
-        label: 'Селекција (Инлајн)',
-        icon: <CircleDot size={16} />,
-        cat: 'напредни',
-        subjects: ['languages'],
-        priority: 7,
-      },
-      {
-        id: 'multi-match',
-        label: 'Мулти-поврзување',
-        icon: <Grid3X3 size={16} />,
-        cat: 'логички',
-        subjects: ['stem', 'all'],
-        priority: 6,
-      },
-      {
-        id: 'short-answer',
-        label: 'Краток одговор',
-        icon: <Type size={16} />,
-        cat: 'текстуални',
-        subjects: ['all'],
-        priority: 10,
-      },
-      {
-        id: 'essay',
-        label: 'Есеј / Долг одговор',
-        icon: <FileText size={16} />,
-        cat: 'текстуални',
-        subjects: ['languages', 'history'],
-        priority: 5,
-      },
-      {
-        id: 'matching',
-        label: 'Поврзување',
-        icon: <Split size={16} />,
-        cat: 'логички',
-        subjects: ['all'],
-        priority: 8,
-      },
-      {
-        id: 'ordering',
-        label: 'Подредување',
-        icon: <ListOrdered size={16} />,
-        cat: 'логички',
-        subjects: ['history', 'stem', 'geometry'],
-        priority: 7,
-      },
-      {
-        id: 'list',
-        label: 'Листа (набројување)',
-        icon: <ListIcon size={16} />,
-        cat: 'листа',
-        subjects: ['all'],
-        priority: 6,
-      },
-      {
-        id: 'table',
-        label: 'Табела',
-        icon: <TableIcon size={16} />,
-        cat: 'напредни',
-        subjects: ['stem'],
-        priority: 9,
-      },
-      {
-        id: 'multi-part',
-        label: 'Мулти-дел (а, б, в)',
-        icon: <Layers size={16} />,
-        cat: 'напредни',
-        subjects: ['stem'],
-        priority: 8,
-      },
-      {
-        id: 'section',
-        label: 'Наслов на Секција',
-        icon: <AlignJustify size={16} />,
-        cat: 'напредни',
-        subjects: ['all'],
-        priority: 5,
-      },
-      {
-        id: 'diagram',
-        label: 'Дијаграм / Цртеж',
-        icon: <ImageIcon size={16} />,
-        cat: 'напредни',
-        subjects: ['stem', 'geography', 'geometry'],
-        priority: 7,
-      },
-      {
-        id: 'statements',
-        label: 'Изјави (Т/Н листа)',
-        icon: <CheckCircle2 size={16} />,
-        cat: 'базични',
-        subjects: ['all'],
-        priority: 8,
-      },
-      {
-        id: 'checklist',
-        label: 'Повеќекратен избор',
-        icon: <CheckSquare size={16} />,
-        cat: 'базични',
-        subjects: ['all'],
-        priority: 7,
-      },
-    ],
-    []
-  );
+  const questionTypes = useMemo(() => buildQuestionTypes(), []);
 
-  const categoryIcons = {
-    базични: <Zap size={14} className="text-amber-500" />,
-    текстуални: <Type size={14} className="text-blue-500" />,
-    логички: <Shuffle size={14} className="text-purple-500" />,
-    листа: <ListOrdered size={14} className="text-emerald-500" />,
-    напредни: <Sparkles size={14} className="text-indigo-500" />,
-    geometry: <Grid3X3 size={14} className="text-indigo-500" />,
-  };
-
-  const categories = [
-    { id: 'all', label: 'Сите' },
-    { id: 'stem', label: 'СТЕМ (Мат/Физ/Хем)' },
-    { id: 'geometry', label: 'Геометрија' },
-    { id: 'languages', label: 'Јазици (Мак/Анг)' },
-    { id: 'history', label: 'Историја/Гео' },
-  ];
+  const categoryIcons = useMemo(() => buildCategoryIcons(), []);
+  const categories = CATEGORY_FILTERS;
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [typeSearch, setTypeSearch] = useState('');
 
-  const filteredTypes = useMemo(() => {
-    let types = [...questionTypes];
+  const filteredTypes = useMemo(
+    () =>
+      buildFilteredQuestionTypes({
+        questionTypes,
+        typeSearch,
+        subject: testInfo.subject,
+        activeCategory,
+      }),
+    [activeCategory, typeSearch, testInfo.subject, questionTypes]
+  );
+  const toolboxSections = useMemo(
+    () => buildToolboxSections(filteredTypes, TOOLBOX_CATEGORY_ORDER),
+    [filteredTypes]
+  );
+  const paperContentView = useMemo(() => determinePaperContentView(view), [view]);
 
-    // 1. Search filter
-    if (typeSearch) {
-      types = types.filter((t) => t.label.toLowerCase().includes(typeSearch.toLowerCase()));
-    }
-
-    // 2. Smart Subject-Aware Sorting
-    const subj = testInfo.subject.toLowerCase();
-    const isSTEM =
-      subj.includes('мат') || subj.includes('физ') || subj.includes('хем') || subj.includes('наук');
-    const isLang = subj.includes('мак') || subj.includes('анг') || subj.includes('јаз');
-    const isGeo = subj.includes('гео');
-
-    types.sort((a, b) => {
-      // 1. Subject relevance
-      const aRel =
-        (isSTEM && a.subjects.includes('stem')) ||
-        (isLang && a.subjects.includes('languages')) ||
-        (isGeo && a.subjects.includes('geometry'));
-      const bRel =
-        (isSTEM && b.subjects.includes('stem')) ||
-        (isLang && b.subjects.includes('languages')) ||
-        (isGeo && b.subjects.includes('geometry'));
-
-      if (aRel && !bRel) return -1;
-      if (!aRel && bRel) return 1;
-
-      // 2. Priority
-      return (b.priority || 0) - (a.priority || 0);
-    });
-
-    // 3. Category Filter
-    if (activeCategory === 'all') return types;
-    return types.filter((t) => t.subjects.includes(activeCategory) || t.subjects.includes('all'));
-  }, [activeCategory, typeSearch, testInfo.subject, questionTypes]);
-
-  const tutorialSteps = [
-    {
-      title: 'Добредојдовте!',
-      text: 'Ова е МакедоТест Про v6.0. Ајде да ја разгледаме околината.',
-      targetId: 'main-nav',
-    },
-    {
-      title: 'Банка на Прашања',
-      text: 'Овде се чуваат Вашите омилени задачи за повторно користење.',
-      targetId: 'bank-tab',
-    },
-    {
-      title: 'Сите 16 Формати',
-      text: 'Додадете прашање со еден клик: СТЕМ табели, инлајн селекција и многу повеќе.',
-      targetId: 'toolbox-sidebar',
-    },
-    {
-      title: 'v6.0 Напредни Поставки',
-      text: 'Активирајте го ZipGrade стилот, оправданиот текст или под-нумерирањето.',
-      targetId: 'advanced-settings',
-    },
-    {
-      title: 'Вашиот Тест',
-      text: 'Ова е Вашето платно. Рендерирањето е во реално време со СТЕМ поддршка.',
-      targetId: 'test-paper',
-    },
-    {
-      title: 'Печатење',
-      text: 'Кога ќе завршите, испечатете го тестот на чист А4 формат.',
-      targetId: 'action-buttons',
-    },
-  ];
+  const tutorialSteps = TUTORIAL_STEPS;
 
   useEffect(() => {
     const initAuth = async () => {
@@ -991,7 +782,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 relative overflow-x-hidden">
-      {showTutorial && (
+      {shouldShowTutorialModal(showTutorial) && (
         <>
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] z-[100] pointer-events-none"></div>
           <div className="fixed inset-0 z-[150] flex items-end justify-center pb-20 pointer-events-none px-4">
@@ -1039,7 +830,7 @@ const App = () => {
       {/* Navbar */}
       <nav
         id="main-nav"
-        className={`bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-[110] shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 0 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl bg-white' : ''}`}
+        className={`bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-[110] shadow-sm print:hidden transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 0, 'ring-[8px] ring-indigo-500/50 shadow-2xl bg-white')}`}
       >
         <div className="flex items-center gap-6">
           <button
@@ -1061,29 +852,19 @@ const App = () => {
           </button>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-          {['editor', 'preview', 'answerKey', 'answerSheet', 'analytics', 'verify'].map((v) => (
+          {NAV_VIEW_TABS.map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase transition ${view === v ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+              className={getNavViewButtonClass(view === v)}
             >
-              {v === 'editor'
-                ? 'Уреди'
-                : v === 'preview'
-                  ? 'Тест'
-                  : v === 'answerKey'
-                    ? 'Клуч'
-                    : v === 'answerSheet'
-                      ? 'Лист'
-                      : v === 'analytics'
-                        ? 'Аналитика'
-                        : 'Verify'}
+              {getNavViewLabel(v)}
             </button>
           ))}
         </div>
         <div
           id="action-buttons"
-          className={`flex items-center gap-3 transition-all duration-500 ${showTutorial && tutorialStep === 5 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1' : ''}`}
+          className={`flex items-center gap-3 transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 5, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1')}`}
         >
           <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
             <button
@@ -1207,13 +988,13 @@ const App = () => {
           <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
             <button
               onClick={() => setLang('mk')}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition ${lang === 'mk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={getLanguageToggleButtonClass(lang === 'mk')}
             >
               MK
             </button>
             <button
               onClick={() => setLang('sq')}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition ${lang === 'sq' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={getLanguageToggleButtonClass(lang === 'sq')}
             >
               AL
             </button>
@@ -1221,39 +1002,30 @@ const App = () => {
           <button
             onClick={saveCurrentTest}
             disabled={isSaving}
-            className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${isSaving ? 'bg-slate-100 text-slate-400' : 'bg-white border border-indigo-200 text-indigo-600 shadow-lg shadow-indigo-50 hover:bg-indigo-50'}`}
+            className={getSaveButtonClass(isSaving)}
           >
             <Cloud className={isSaving ? 'animate-bounce' : ''} size={16} />{' '}
             {isSaving ? t('saving') : t('saveTest')}
           </button>
           <button
             onClick={() => setCollabEnabled((prev) => !prev)}
-            className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${collabEnabled ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+            className={getCollabToggleButtonClass(collabEnabled)}
             title={`Сесија: ${collabSessionId}`}
           >
             <Library size={16} /> {collabEnabled ? 'Collab ON' : 'Collab OFF'}
           </button>
           <div className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-500">
-            {collabSupported
-              ? `${collabTransport === 'cloud' ? 'RTDB' : 'Local'} • ${collabSessionId}`
-              : 'Collab unsupported'}
+            {buildCollabStatusBadgeText(collabSupported, collabTransport, collabSessionId)}
           </div>
           <div className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase text-slate-500 max-w-[220px] truncate">
-            Online {activeCollaborators.length}
-            {activeCollaborators.length > 0
-              ? ` • ${activeCollaborators
-                  .slice(0, 2)
-                  .map((p) => p.displayName || 'Teacher')
-                  .join(', ')}`
-              : ''}
+            {buildOnlineCollaboratorsBadgeText(activeCollaborators)}
           </div>
-          {lastRemoteEdit && (
+          {shouldShowLastEditBadge(lastRemoteEdit) && (
             <div className="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] font-black uppercase text-amber-700 max-w-[250px] truncate">
-              Last edit: {lastRemoteEdit.displayName}{' '}
-              {formatLastEditAgeMs(Date.now() - lastRemoteEdit.ts)}
+              {buildLastEditBadgeText(lastRemoteEdit, Date.now(), formatLastEditAgeMs)}
             </div>
           )}
-          {conflictHint && (
+          {shouldShowConflictHint(conflictHint) && (
             <div className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-[10px] font-black text-rose-700 max-w-[360px] truncate">
               {conflictHint}
             </div>
@@ -1265,29 +1037,39 @@ const App = () => {
             <Printer size={16} /> {t('print')}
           </button>
           <button
-            onClick={() =>
-              downloadTestPdf({
-                title: testInfo.title,
-                subject: testInfo.subject,
-                grade: testInfo.grade,
-                questions,
-                lang,
-              })
-            }
+            onClick={async () => {
+              try {
+                const { downloadTestPdf } = await loadPdfExporter();
+                await downloadTestPdf({
+                  title: testInfo.title,
+                  subject: testInfo.subject,
+                  grade: testInfo.grade,
+                  questions,
+                  lang,
+                });
+              } catch (err) {
+                console.error('PDF export failed:', err);
+              }
+            }}
             className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-violet-100 hover:scale-105 transition active:scale-95"
           >
             <FileText size={16} /> PDF
           </button>
           <button
-            onClick={() =>
-              downloadTestDocx({
-                title: testInfo.title,
-                subject: testInfo.subject,
-                grade: testInfo.grade,
-                teacher: testInfo.teacher,
-                questions,
-              })
-            }
+            onClick={async () => {
+              try {
+                const { downloadTestDocx } = await loadDocxExporter();
+                await downloadTestDocx({
+                  title: testInfo.title,
+                  subject: testInfo.subject,
+                  grade: testInfo.grade,
+                  teacher: testInfo.teacher,
+                  questions,
+                });
+              } catch (err) {
+                console.error('DOCX export failed:', err);
+              }
+            }}
             className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 shadow-lg shadow-emerald-100 hover:scale-105 transition active:scale-95"
           >
             <FileText size={16} /> DOCX
@@ -1296,8 +1078,12 @@ const App = () => {
             onClick={() => setView(view === 'editor' ? 'preview' : 'editor')}
             className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 hover:bg-slate-50 transition"
           >
-            {view === 'editor' ? <Eye size={16} /> : <Settings size={16} />}{' '}
-            {view === 'editor' ? t('preview') : t('editor')}
+            {getEditorToggleIconType(view) === 'preview' ? (
+              <Eye size={16} />
+            ) : (
+              <Settings size={16} />
+            )}{' '}
+            {getEditorToggleLabel(view, t)}
           </button>
         </div>
       </nav>
@@ -1306,17 +1092,17 @@ const App = () => {
         {/* Sidebar */}
         <aside
           id="toolbox-sidebar"
-          className={`${sidebarOpen ? 'w-80 opacity-100' : 'w-0 opacity-0 pointer-events-none'} border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 2 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white' : ''}`}
+          className={`${getSidebarContainerClass(sidebarOpen)} border-r border-slate-200 p-8 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar print:hidden transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 2, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white')}`}
         >
-          <div className={`${sidebarOpen ? 'block' : 'hidden'} space-y-10`}>
+          <div className={`${getSidebarContentClass(sidebarOpen)} space-y-10`}>
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Plus size={12} /> {t('toolbox')}
                 </h3>
-                {testInfo.subject.length > 5 && (
+                {shouldShowSmartBadge(testInfo.subject) && (
                   <div className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase animate-pulse">
-                    Smart: {testInfo.subject.split(' ')[0]}
+                    Smart: {getSmartBadgeText(testInfo.subject)}
                   </div>
                 )}
               </div>
@@ -1348,61 +1134,46 @@ const App = () => {
               </div>
 
               <div className="space-y-10">
-                {['базични', 'текстуални', 'логички', 'листа', 'напредни', 'geometry'].map(
-                  (category) => {
-                    const items = filteredTypes.filter(
-                      (t) =>
-                        t.cat === category ||
-                        (category === 'geometry' && t.subjects.includes('geometry'))
-                    );
-                    // Avoid showing duplicates in both their original category and geometry if they are already prominent
-                    const finalItems =
-                      category === 'geometry'
-                        ? items
-                        : items.filter(
-                            (t) => !t.subjects.includes('geometry') || category !== 'напредни'
-                          );
-
-                    if (items.length === 0) return null;
-                    return (
-                      <div
-                        key={category}
-                        className="space-y-5 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100/50"
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                            {categoryIcons[category]}
-                          </div>
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                            {t(category)}
-                          </h4>
+                {toolboxSections.map((section) => {
+                  const { category, items } = section;
+                  return (
+                    <div
+                      key={category}
+                      className="space-y-5 bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100/50"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                          {categoryIcons[category]}
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          {finalItems.map((type) => (
-                            <button
-                              key={type.id}
-                              onClick={() => addQuestion(type.id)}
-                              className="flex flex-col items-center gap-3 p-4 rounded-[2rem] border border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group text-center shadow-sm hover:shadow-md relative overflow-hidden active:scale-95"
-                            >
-                              <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
-                                {type.icon}
-                              </div>
-                              <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tight">
-                                {type.label}
-                              </span>
-                              {(type.subjects.includes('stem') ||
-                                type.subjects.includes('languages')) && (
-                                <div
-                                  className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${type.subjects.includes('stem') ? 'bg-indigo-400' : 'bg-blue-400'}`}
-                                />
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                          {t(category)}
+                        </h4>
                       </div>
-                    );
-                  }
-                )}
+                      <div className="grid grid-cols-2 gap-3">
+                        {items.map((type) => (
+                          <button
+                            key={type.id}
+                            onClick={() => addQuestion(type.id)}
+                            className="flex flex-col items-center gap-3 p-4 rounded-[2rem] border border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group text-center shadow-sm hover:shadow-md relative overflow-hidden active:scale-95"
+                          >
+                            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
+                              {type.icon}
+                            </div>
+                            <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tight">
+                              {type.label}
+                            </span>
+                            {(type.subjects.includes('stem') ||
+                              type.subjects.includes('languages')) && (
+                              <div
+                                className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${type.subjects.includes('stem') ? 'bg-indigo-400' : 'bg-blue-400'}`}
+                              />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -1422,7 +1193,7 @@ const App = () => {
                   <span className="text-[10px] font-black uppercase">Скала на оценки</span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {[5, 4, 3, 2].map((grade) => (
+                  {getGradingScaleGradesForDisplay().map((grade) => (
                     <div
                       key={grade}
                       className="bg-white/10 rounded-xl p-2 text-center border border-white/10"
@@ -1437,7 +1208,7 @@ const App = () => {
 
             <div
               id="bank-tab"
-              className={`transition-all duration-500 ${showTutorial && tutorialStep === 1 ? 'ring-4 ring-indigo-500 bg-indigo-50 p-4 rounded-3xl' : ''}`}
+              className={`transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 1, 'ring-4 ring-indigo-500 bg-indigo-50 p-4 rounded-3xl')}`}
             >
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <History size={12} /> Банка ({questionBank.length})
@@ -1554,7 +1325,7 @@ const App = () => {
         <main className="flex-1 p-12 bg-slate-50/50 flex flex-col items-center">
           <div
             id="advanced-settings"
-            className={`w-full max-w-[800px] mb-8 bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-wrap gap-6 items-center justify-center shadow-sm print:hidden transition-all duration-500 ${showTutorial && tutorialStep === 3 ? 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120]' : ''}`}
+            className={`w-full max-w-[800px] mb-8 bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-wrap gap-6 items-center justify-center shadow-sm print:hidden transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 3, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
           >
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
               <Layout size={14} className="text-slate-400" />
@@ -1569,14 +1340,14 @@ const App = () => {
             </div>
             <button
               onClick={() => setTestInfo({ ...testInfo, zipGrade: !testInfo.zipGrade })}
-              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.zipGrade ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}
+              className={getAdvancedToggleButtonClass(testInfo.zipGrade)}
             >
               <Hash size={14} />
               <span className="text-[11px] font-black uppercase">ZipGrade Стил</span>
             </button>
             <button
               onClick={() => setTestInfo({ ...testInfo, subNumbering: !testInfo.subNumbering })}
-              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.subNumbering ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}
+              className={getAdvancedToggleButtonClass(testInfo.subNumbering)}
             >
               <ListOrdered size={14} />
               <span className="text-[11px] font-black uppercase">Под-нумерирање</span>
@@ -1585,19 +1356,19 @@ const App = () => {
               onClick={() =>
                 setTestInfo({
                   ...testInfo,
-                  layout: testInfo.layout === 'single' ? 'double' : 'single',
+                  layout: getNextLayout(testInfo.layout),
                 })
               }
-              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.layout === 'double' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}
+              className={getAdvancedToggleButtonClass(testInfo.layout === 'double')}
             >
               <Columns size={14} />
               <span className="text-[11px] font-black uppercase">
-                {testInfo.layout === 'single' ? '2 Колони' : '1 Колона'}
+                {getLayoutToggleLabel(testInfo.layout)}
               </span>
             </button>
             <button
               onClick={() => setTestInfo({ ...testInfo, showScale: !testInfo.showScale })}
-              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition ${testInfo.showScale ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-white'}`}
+              className={getAdvancedToggleButtonClass(testInfo.showScale)}
             >
               <Trophy size={14} />
               <span className="text-[11px] font-black uppercase">Прикажи Скала</span>
@@ -1613,7 +1384,7 @@ const App = () => {
 
           <div
             id="test-paper"
-            className={`w-[210mm] min-h-[297mm] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-[20mm] relative flex flex-col transition-all duration-500 ${showTutorial && tutorialStep === 4 ? 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]' : ''}`}
+            className={`w-[210mm] min-h-[297mm] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-[20mm] relative flex flex-col transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 4, 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
           >
             {testInfo.watermark && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] text-[120px] font-black uppercase select-none">
@@ -1624,7 +1395,7 @@ const App = () => {
             <header className="relative z-10 mb-16 border-b-4 border-slate-900 pb-12">
               <div className="flex justify-between items-start mb-10">
                 <div className="space-y-1.5 flex-1 pr-10">
-                  {view === 'editor' ? (
+                  {shouldShowTestFormFields(view) ? (
                     <>
                       <input
                         className="block w-full text-xs font-black uppercase tracking-widest bg-slate-50 rounded px-2 py-1 outline-none border-b-2 border-transparent focus:border-indigo-500"
@@ -1671,7 +1442,7 @@ const App = () => {
                   </span>
                 </div>
               </div>
-              {view !== 'answerKey' && view !== 'answerSheet' && view !== 'analytics' && (
+              {shouldShowStudentLineFields(view) && (
                 <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
                   <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
                     {t('student')}:
@@ -1683,75 +1454,81 @@ const App = () => {
               )}
             </header>
 
-            <div
-              className={`relative z-10 flex-grow ${view === 'answerSheet' ? 'space-y-20' : ''}`}
-            >
-              {view === 'analytics' ? (
-                <TeacherAnalyticsPanel
-                  attempts={analyticsAttempts}
-                  questions={questions}
-                  onSetBloom={setQuestionBloom}
-                  onSetRagFeedback={setQuestionRagFeedback}
-                />
-              ) : view === 'verify' ? (
-                <TeacherVerifyPanel />
-              ) : view === 'answerSheet' ? (
-                <div className="grid grid-cols-2 gap-10">
-                  {questions.map((q, idx) => (
-                    <div
-                      key={q.id}
-                      className="flex items-center gap-4 p-4 border-b border-slate-100"
-                    >
-                      <span className="font-black text-slate-900 w-6">{idx + 1}.</span>
-                      <div className="flex gap-2">
-                        {q.type === 'multiple' ||
-                        q.type === 'checklist' ||
-                        q.type === 'true-false' ? (
-                          (q.type === 'true-false' ? ['Т', 'Н'] : q.options).map((_, oIdx) => (
-                            <div
-                              key={oIdx}
-                              className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] font-black text-slate-300"
-                            >
-                              {q.type === 'true-false'
-                                ? oIdx === 0
-                                  ? 'Т'
-                                  : 'Н'
-                                : String.fromCharCode(65 + oIdx)}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="border-b-2 border-slate-200 w-40 h-6" />
-                        )}
-                      </div>
+            <div className={getPaperContentContainerClass(paperContentView)}>
+              {(() => {
+                const panelType = getPaperPanelType(paperContentView);
+                if (isAnalyticsPanelType(panelType)) {
+                  return (
+                    <TeacherAnalyticsPanel
+                      attempts={analyticsAttempts}
+                      questions={questions}
+                      onSetBloom={setQuestionBloom}
+                      onSetRagFeedback={setQuestionRagFeedback}
+                    />
+                  );
+                }
+                if (isVerifyPanelType(panelType)) {
+                  return <TeacherVerifyPanel />;
+                }
+                if (isAnswerSheetPanelType(panelType)) {
+                  return (
+                    <div className="grid grid-cols-2 gap-10">
+                      {questions.map((q, idx) => (
+                        <div
+                          key={q.id}
+                          className="flex items-center gap-4 p-4 border-b border-slate-100"
+                        >
+                          <span className="font-black text-slate-900 w-6">{idx + 1}.</span>
+                          <div className="flex gap-2">
+                            {shouldRenderAnswerSheetOptions(q.type) ? (
+                              getAnswerSheetOptionLabels(q).map((label, oIdx) => (
+                                <div
+                                  key={oIdx}
+                                  className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] font-black text-slate-300"
+                                >
+                                  {label}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="border-b-2 border-slate-200 w-40 h-6" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                (() => {
-                  const sections = [];
-                  let currentSection = { layout: testInfo.layout, questions: [] };
-
-                  questions.forEach((q, idx) => {
-                    if (q.type === 'section') {
-                      if (currentSection.questions.length > 0) sections.push(currentSection);
-                      sections.push({ isHeader: true, q, idx });
-                      currentSection = {
-                        layout: q.sectionLayout || testInfo.layout,
-                        questions: [],
-                      };
-                    } else {
-                      currentSection.questions.push({ q, idx });
-                    }
-                  });
-                  sections.push(currentSection);
-
-                  return sections.map((s, sIdx) => {
-                    if (s.isHeader) {
-                      return (
-                        <div key={s.q.id}>
+                  );
+                }
+                // default: questions panel
+                const sections = buildQuestionSections(questions, testInfo.layout);
+                return sections.map((s, sIdx) => {
+                  if (s.isHeader) {
+                    return (
+                      <div key={s.q.id}>
+                        <Question
+                          q={s.q}
+                          idx={s.idx}
+                          view={view}
+                          testInfo={testInfo}
+                          questions={questions}
+                          setQuestions={setQuestions}
+                          saveToBank={saveToBank}
+                          showHelp={showHelp}
+                          setShowHelp={setShowHelp}
+                          helpContent={helpContent}
+                          randomizeAnswers={randomizeAnswers}
+                          duplicates={duplicates}
+                          moveQuestion={moveQuestion}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={sIdx} className={getSectionGridClass(s.layout)}>
+                      {s.questions.map(({ q, idx }) => (
+                        <div key={q.id} className={getSectionItemSpanClass(s.layout, q.fullWidth)}>
                           <Question
-                            q={s.q}
-                            idx={s.idx}
+                            q={q}
+                            idx={idx}
                             view={view}
                             testInfo={testInfo}
                             questions={questions}
@@ -1765,49 +1542,20 @@ const App = () => {
                             moveQuestion={moveQuestion}
                           />
                         </div>
-                      );
-                    }
-                    return (
-                      <div
-                        key={sIdx}
-                        className={`grid gap-x-12 gap-y-20 ${s.layout === 'double' ? 'grid-cols-2 mt-20' : 'grid-cols-1 mt-20'}`}
-                      >
-                        {s.questions.map(({ q, idx }) => (
-                          <div
-                            key={q.id}
-                            className={s.layout === 'double' && q.fullWidth ? 'col-span-2' : ''}
-                          >
-                            <Question
-                              q={q}
-                              idx={idx}
-                              view={view}
-                              testInfo={testInfo}
-                              questions={questions}
-                              setQuestions={setQuestions}
-                              saveToBank={saveToBank}
-                              showHelp={showHelp}
-                              setShowHelp={setShowHelp}
-                              helpContent={helpContent}
-                              randomizeAnswers={randomizeAnswers}
-                              duplicates={duplicates}
-                              moveQuestion={moveQuestion}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  });
-                })()
-              )}
+                      ))}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
-            {testInfo.showScale && (
+            {shouldShowGradingScale(testInfo) && (
               <div className="mt-20 p-8 border-4 border-slate-900 rounded-[2rem] w-fit relative z-10">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-4 text-slate-400">
                   Скала на оцени
                 </h3>
                 <div className="flex gap-6">
-                  {[5, 4, 3, 2].map((g) => (
+                  {getGradingScaleGradesForDisplay().map((g) => (
                     <div
                       key={g}
                       className="flex flex-col items-center border-r-2 border-slate-100 pr-6 last:border-0"
@@ -1865,14 +1613,14 @@ const App = () => {
         }}
       />
 
-      {duplicateAlert && (
+      {shouldShowDuplicateAlert(duplicateAlert) && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl animate-in slide-in-from-bottom-5 z-[200]">
           {duplicateAlert}
         </div>
       )}
 
       {/* Floating Action Button for adding questions when sidebar is closed */}
-      {!sidebarOpen && view === 'editor' && (
+      {shouldShowAddQuestionFAB(sidebarOpen, view) && (
         <div className="fixed bottom-10 left-10 z-[200] group">
           <div className="absolute bottom-full left-0 mb-4 flex flex-col gap-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all transform translate-y-4 group-hover:translate-y-0">
             {['multiple', 'true-false', 'short-answer', 'section'].map((type) => (
@@ -1905,7 +1653,7 @@ const App = () => {
         </div>
       )}
 
-      {showPasteModal && (
+      {shouldShowPasteModal(showPasteModal) && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-6">
           <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-start mb-8">
