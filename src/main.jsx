@@ -119,7 +119,10 @@ import {
   TOOLBOX_CATEGORY_ORDER,
 } from './features/editor/categoryConfig';
 import { buildFilteredQuestionTypes } from './features/editor/filterTypes';
-import { getGradingScaleGradesForDisplay } from './features/editor/gradingScale';
+import {
+  getGradingScaleGradesForDisplay,
+  getGradingScaleThresholds,
+} from './features/editor/gradingScale';
 import { HELP_CONTENT } from './features/editor/helpContent';
 import {
   getNavViewButtonClass,
@@ -271,15 +274,7 @@ const App = () => {
     }, 0);
   }, [questions]);
 
-  const gradingScale = useMemo(
-    () => ({
-      5: Math.ceil(totalPoints * 0.9),
-      4: Math.ceil(totalPoints * 0.75),
-      3: Math.ceil(totalPoints * 0.6),
-      2: Math.ceil(totalPoints * 0.45),
-    }),
-    [totalPoints]
-  );
+  const gradingScale = useMemo(() => getGradingScaleThresholds(totalPoints), [totalPoints]);
 
   const analyticsAttempts = useMemo(() => buildDemoAttemptsFromQuestions(questions), [questions]);
 
