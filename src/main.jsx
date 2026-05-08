@@ -1332,10 +1332,10 @@ const App = () => {
           <History size={16} /> Undo
         </button>
 
-        <main className="flex-1 p-12 bg-slate-50/50 flex flex-col items-center">
+        <main className="flex-1 px-6 py-6 xl:px-8 xl:py-7 bg-slate-50/70 flex flex-col items-center">
           <div
             id="advanced-settings"
-            className={`w-full max-w-[800px] mb-8 bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-wrap gap-6 items-center justify-center shadow-sm print:hidden transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 3, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
+            className={`w-full max-w-[760px] mb-7 bg-white/95 backdrop-blur-sm p-5 xl:p-6 rounded-[2rem] border border-slate-200/80 flex flex-wrap gap-4 xl:gap-5 items-center justify-center shadow-[0_18px_50px_rgba(15,23,42,0.08)] print:hidden transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 3, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
           >
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
               <Layout size={14} className="text-slate-400" />
@@ -1392,148 +1392,127 @@ const App = () => {
             </button>
           </div>
 
-          <div
-            id="test-paper"
-            className={`w-[210mm] min-h-[297mm] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-[20mm] relative flex flex-col transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 4, 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
-          >
-            {testInfo.watermark && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] text-[120px] font-black uppercase select-none">
-                {testInfo.watermark}
-              </div>
-            )}
-
-            <header className="relative z-10 mb-16 border-b-4 border-slate-900 pb-12">
-              <div className="flex justify-between items-start mb-10">
-                <div className="space-y-1.5 flex-1 pr-10">
-                  {shouldShowTestFormFields(view) ? (
-                    <>
-                      <input
-                        className="block w-full text-xs font-black uppercase tracking-widest bg-slate-50 rounded px-2 py-1 outline-none border-b-2 border-transparent focus:border-indigo-500"
-                        value={buildSchoolHeaderValue(testInfo)}
-                        onChange={(e) => {
-                          setTestInfo(applySchoolHeaderInput(testInfo, e.target.value));
-                        }}
-                      />
-                      <input
-                        className="block w-full text-4xl font-black tracking-tighter text-slate-900 bg-slate-50 rounded px-2 py-2 mt-2 outline-none border-b-2 border-transparent focus:border-indigo-500"
-                        value={testInfo.subject}
-                        onChange={(e) => setTestInfo({ ...testInfo, subject: e.target.value })}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none">
-                        {buildSchoolHeaderValue(testInfo)}
-                      </span>
-                      <h1 className="text-5xl font-black text-slate-900 tracking-tighter mt-4 leading-none">
-                        {testInfo.subject}
-                      </h1>
-                    </>
-                  )}
-                </div>
-                <div className="text-right flex flex-col items-end">
-                  <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl flex items-center gap-3 shadow-xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                      {t('grade')}
-                    </span>
-                    <input
-                      className="bg-transparent text-xl font-black w-10 text-center outline-none"
-                      value={testInfo.grade}
-                      onChange={(e) => setTestInfo({ ...testInfo, grade: e.target.value })}
-                    />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-300 block mt-4 uppercase tracking-widest">
-                    {t('date')}: {testInfo.date}
-                  </span>
-                </div>
-              </div>
-              {shouldShowStudentLineFields(view) && (
-                <div className="grid grid-cols-6 gap-10 mt-16 font-sans">
-                  <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
-                    {t('student')}:
-                  </div>
-                  <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right">
-                    {t('points')}: _____ / {totalPoints}
-                  </div>
+          <div className="w-full flex justify-center">
+            <div
+              id="test-paper"
+              className={`w-full max-w-[180mm] xl:max-w-[172mm] 2xl:max-w-[168mm] min-h-[297mm] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(255,255,255,0.94))] shadow-[0_24px_70px_rgba(15,23,42,0.08)] p-8 sm:p-10 xl:p-[16mm] 2xl:p-[18mm] relative flex flex-col origin-top scale-[0.98] xl:scale-[0.92] 2xl:scale-[0.88] transition-all duration-500 rounded-[2.5rem] border border-slate-100 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 4, 'ring-[15px] ring-indigo-500/50 shadow-2xl relative z-[120]')}`}
+            >
+              {testInfo.watermark && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-45deg] text-[120px] font-black uppercase select-none">
+                  {testInfo.watermark}
                 </div>
               )}
-            </header>
 
-            <div className={getPaperContentContainerClass(paperContentView)}>
-              {(() => {
-                const panelType = getPaperPanelType(paperContentView);
-                if (isAnalyticsPanelType(panelType)) {
-                  return (
-                    <TeacherAnalyticsPanel
-                      attempts={analyticsAttempts}
-                      questions={questions}
-                      onSetBloom={setQuestionBloom}
-                      onSetRagFeedback={setQuestionRagFeedback}
-                    />
-                  );
-                }
-                if (isVerifyPanelType(panelType)) {
-                  return <TeacherVerifyPanel />;
-                }
-                if (isAnswerSheetPanelType(panelType)) {
-                  return (
-                    <div className="grid grid-cols-2 gap-10">
-                      {questions.map((q, idx) => (
-                        <div
-                          key={q.id}
-                          className="flex items-center gap-4 p-4 border-b border-slate-100"
-                        >
-                          <span className="font-black text-slate-900 w-6">{idx + 1}.</span>
-                          <div className="flex gap-2">
-                            {shouldRenderAnswerSheetOptions(q.type) ? (
-                              getAnswerSheetOptionLabels(q).map((label, oIdx) => (
-                                <div
-                                  key={oIdx}
-                                  className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] font-black text-slate-300"
-                                >
-                                  {label}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="border-b-2 border-slate-200 w-40 h-6" />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }
-                // default: questions panel
-                const sections = buildQuestionSections(questions, testInfo.layout);
-                return sections.map((s, sIdx) => {
-                  if (s.isHeader) {
-                    return (
-                      <div key={s.q.id}>
-                        <Question
-                          q={s.q}
-                          idx={s.idx}
-                          view={view}
-                          testInfo={testInfo}
-                          questions={questions}
-                          setQuestions={setQuestions}
-                          saveToBank={saveToBank}
-                          showHelp={showHelp}
-                          setShowHelp={setShowHelp}
-                          helpContent={helpContent}
-                          randomizeAnswers={randomizeAnswers}
-                          duplicates={duplicates}
-                          moveQuestion={moveQuestion}
+              <header className="relative z-10 mb-12 border-b-4 border-slate-900/95 pb-10">
+                <div className="flex justify-between items-start mb-8 gap-6">
+                  <div className="space-y-2 flex-1 pr-6 lg:pr-10">
+                    {shouldShowTestFormFields(view) ? (
+                      <>
+                        <input
+                          className="block w-full text-xs font-black uppercase tracking-[0.25em] bg-slate-50/80 rounded-2xl px-3 py-2 outline-none border border-slate-100 focus:border-indigo-500 focus:bg-white transition"
+                          value={buildSchoolHeaderValue(testInfo)}
+                          onChange={(e) => {
+                            setTestInfo(applySchoolHeaderInput(testInfo, e.target.value));
+                          }}
                         />
+                        <input
+                          className="block w-full text-4xl xl:text-[2.7rem] font-black tracking-tighter text-slate-900 bg-slate-50/80 rounded-2xl px-3 py-3 mt-3 outline-none border border-slate-100 focus:border-indigo-500 focus:bg-white transition"
+                          value={testInfo.subject}
+                          onChange={(e) => setTestInfo({ ...testInfo, subject: e.target.value })}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.35em] leading-none">
+                          {buildSchoolHeaderValue(testInfo)}
+                        </span>
+                        <h1 className="text-5xl xl:text-[3.6rem] font-black text-slate-900 tracking-tighter mt-4 leading-none max-w-[11ch]">
+                          {testInfo.subject}
+                        </h1>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-4 shrink-0">
+                    <div className="bg-slate-900 text-white px-5 py-3 rounded-[1.25rem] flex items-center gap-3 shadow-xl shadow-slate-900/10 border border-slate-800/40">
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">
+                        {t('grade')}
+                      </span>
+                      <input
+                        className="bg-transparent text-xl font-black w-10 text-center outline-none tabular-nums"
+                        value={testInfo.grade}
+                        onChange={(e) => setTestInfo({ ...testInfo, grade: e.target.value })}
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-300 block uppercase tracking-[0.3em] text-right max-w-[18ch]">
+                      {t('date')}: {testInfo.date}
+                    </span>
+                  </div>
+                </div>
+                {shouldShowStudentLineFields(view) && (
+                  <div className="grid grid-cols-6 gap-8 mt-12 font-sans">
+                    <div className="col-span-4 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.35em]">
+                      {t('student')}:
+                    </div>
+                    <div className="col-span-2 border-b-2 border-slate-200 pb-2 text-[10px] font-black text-slate-300 uppercase text-right tracking-[0.3em]">
+                      {t('points')}: _____ / {totalPoints}
+                    </div>
+                  </div>
+                )}
+              </header>
+
+              <div className={getPaperContentContainerClass(paperContentView)}>
+                {(() => {
+                  const panelType = getPaperPanelType(paperContentView);
+                  if (isAnalyticsPanelType(panelType)) {
+                    return (
+                      <TeacherAnalyticsPanel
+                        attempts={analyticsAttempts}
+                        questions={questions}
+                        onSetBloom={setQuestionBloom}
+                        onSetRagFeedback={setQuestionRagFeedback}
+                      />
+                    );
+                  }
+                  if (isVerifyPanelType(panelType)) {
+                    return <TeacherVerifyPanel />;
+                  }
+                  if (isAnswerSheetPanelType(panelType)) {
+                    return (
+                      <div className="grid grid-cols-2 gap-10">
+                        {questions.map((q, idx) => (
+                          <div
+                            key={q.id}
+                            className="flex items-center gap-4 p-4 border-b border-slate-100"
+                          >
+                            <span className="font-black text-slate-900 w-6">{idx + 1}.</span>
+                            <div className="flex gap-2">
+                              {shouldRenderAnswerSheetOptions(q.type) ? (
+                                getAnswerSheetOptionLabels(q).map((label, oIdx) => (
+                                  <div
+                                    key={oIdx}
+                                    className="w-8 h-8 rounded-full border-2 border-slate-300 flex items-center justify-center text-[10px] font-black text-slate-300"
+                                  >
+                                    {label}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="border-b-2 border-slate-200 w-40 h-6" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     );
                   }
-                  return (
-                    <div key={sIdx} className={getSectionGridClass(s.layout)}>
-                      {s.questions.map(({ q, idx }) => (
-                        <div key={q.id} className={getSectionItemSpanClass(s.layout, q.fullWidth)}>
+                  // default: questions panel
+                  const sections = buildQuestionSections(questions, testInfo.layout);
+                  return sections.map((s, sIdx) => {
+                    if (s.isHeader) {
+                      return (
+                        <div key={s.q.id}>
                           <Question
-                            q={q}
-                            idx={idx}
+                            q={s.q}
+                            idx={s.idx}
                             view={view}
                             testInfo={testInfo}
                             questions={questions}
@@ -1547,49 +1526,77 @@ const App = () => {
                             moveQuestion={moveQuestion}
                           />
                         </div>
-                      ))}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
+                      );
+                    }
+                    return (
+                      <div key={sIdx} className={getSectionGridClass(s.layout)}>
+                        {s.questions.map(({ q, idx }) => (
+                          <div
+                            key={q.id}
+                            className={getSectionItemSpanClass(s.layout, q.fullWidth)}
+                          >
+                            <Question
+                              q={q}
+                              idx={idx}
+                              view={view}
+                              testInfo={testInfo}
+                              questions={questions}
+                              setQuestions={setQuestions}
+                              saveToBank={saveToBank}
+                              showHelp={showHelp}
+                              setShowHelp={setShowHelp}
+                              helpContent={helpContent}
+                              randomizeAnswers={randomizeAnswers}
+                              duplicates={duplicates}
+                              moveQuestion={moveQuestion}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
 
-            {shouldShowGradingScale(testInfo) && (
-              <div className="mt-20 p-8 border-4 border-slate-900 rounded-[2rem] w-fit relative z-10">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-4 text-slate-400">
-                  Скала на оцени
-                </h3>
-                <div className="flex gap-6">
-                  {getGradingScaleGradesForDisplay().map((g) => (
-                    <div
-                      key={g}
-                      className="flex flex-col items-center border-r-2 border-slate-100 pr-6 last:border-0"
-                    >
-                      <span className="text-2xl font-black text-slate-900">{g}</span>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {gradingScale[g]}+
-                      </span>
-                    </div>
-                  ))}
+              {shouldShowGradingScale(testInfo) && (
+                <div className="mt-16 p-7 border-4 border-slate-900/90 rounded-[2rem] w-fit relative z-10 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+                  <h3 className="text-xs font-black uppercase tracking-[0.35em] mb-4 text-slate-400">
+                    Скала на оцени
+                  </h3>
+                  <div className="flex gap-5">
+                    {getGradingScaleGradesForDisplay().map((g) => (
+                      <div
+                        key={g}
+                        className="flex flex-col items-center border-r-2 border-slate-100 pr-5 last:border-0"
+                      >
+                        <span className="text-[1.75rem] font-black text-slate-900 leading-none">
+                          {g}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {gradingScale[g]}+
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  {buildSchoolHeaderValue(testInfo)} • v6.0 Pro
-                </p>
-                <p className="text-[8px] font-bold text-slate-300 uppercase mt-1">
-                  Автор: Игор Богданоски
-                </p>
-              </div>
-              <div className="text-center w-80">
-                <div className="border-b-4 border-slate-900 mb-4 h-16" />
-                <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">
-                  {t('teacherSignature')}
-                </p>
-              </div>
-            </footer>
+              )}
+              <footer className="relative z-10 mt-24 pt-10 border-t-[6px] border-slate-900 flex justify-between items-end pb-6 text-slate-900 font-sans">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.28em]">
+                    {buildSchoolHeaderValue(testInfo)} • v6.0 Pro
+                  </p>
+                  <p className="text-[8px] font-bold text-slate-300 uppercase mt-1">
+                    Автор: Игор Богданоски
+                  </p>
+                </div>
+                <div className="text-center w-80">
+                  <div className="border-b-4 border-slate-900 mb-4 h-16" />
+                  <p className="text-xs font-black uppercase tracking-[0.4em] leading-none">
+                    {t('teacherSignature')}
+                  </p>
+                </div>
+              </footer>
+            </div>
           </div>
         </main>
       </div>
