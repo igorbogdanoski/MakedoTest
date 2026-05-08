@@ -85,6 +85,7 @@ import {
   getSaveButtonClass,
   getSaveButtonIconClass,
   getSaveButtonLabel,
+  getUndoButtonClass,
   getVisionImportButtonClass,
   getVisionImportButtonLabel,
 } from './features/editor/actionButtons';
@@ -1330,7 +1331,7 @@ const App = () => {
         <button
           onClick={handleUndo}
           disabled={undoStack.length === 0}
-          className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition ${undoStack.length === 0 ? 'bg-slate-100 text-slate-400' : 'bg-white border border-slate-200 text-slate-600 shadow-lg shadow-slate-100 hover:bg-slate-50'}`}
+          className={getUndoButtonClass(undoStack.length > 0)}
         >
           <History size={16} /> Undo
         </button>

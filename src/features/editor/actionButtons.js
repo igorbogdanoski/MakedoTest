@@ -22,6 +22,12 @@ const COLLAB_BUTTON_ENABLED_CLASS =
 const COLLAB_BUTTON_DISABLED_CLASS =
   'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50';
 
+const UNDO_BUTTON_BASE_CLASS =
+  'px-5 py-2.5 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 transition';
+const UNDO_BUTTON_DISABLED_CLASS = 'bg-slate-100 text-slate-400';
+const UNDO_BUTTON_ENABLED_CLASS =
+  'bg-white border border-slate-200 text-slate-600 shadow-lg shadow-slate-100 hover:bg-slate-50';
+
 export function getLanguageToggleButtonClass(isActive) {
   return `${LANGUAGE_BUTTON_BASE_CLASS} ${isActive ? LANGUAGE_BUTTON_ACTIVE_CLASS : LANGUAGE_BUTTON_INACTIVE_CLASS}`;
 }
@@ -45,6 +51,10 @@ export function getVisionImportButtonClass(isVisionImporting) {
 
 export function getVisionImportButtonLabel(isVisionImporting) {
   return isVisionImporting ? 'OCR...' : 'Vision';
+}
+
+export function getUndoButtonClass(canUndo) {
+  return `${UNDO_BUTTON_BASE_CLASS} ${canUndo ? UNDO_BUTTON_ENABLED_CLASS : UNDO_BUTTON_DISABLED_CLASS}`;
 }
 
 export function getCollabToggleButtonClass(isEnabled) {

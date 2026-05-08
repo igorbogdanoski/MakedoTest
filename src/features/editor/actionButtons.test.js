@@ -5,6 +5,7 @@ import {
   getSaveButtonClass,
   getSaveButtonIconClass,
   getSaveButtonLabel,
+  getUndoButtonClass,
   getVisionImportButtonClass,
   getVisionImportButtonLabel,
 } from './actionButtons.js';
@@ -44,6 +45,11 @@ describe('actionButtons helpers', () => {
   it('builds vision import button labels for busy and idle states', () => {
     expect(getVisionImportButtonLabel(true)).toBe('OCR...');
     expect(getVisionImportButtonLabel(false)).toBe('Vision');
+  });
+
+  it('builds undo button classes for enabled and disabled states', () => {
+    expect(getUndoButtonClass(true)).toContain('border-slate-200 text-slate-600');
+    expect(getUndoButtonClass(false)).toContain('bg-slate-100 text-slate-400');
   });
 
   it('builds collab toggle button classes for enabled and disabled states', () => {
