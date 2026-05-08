@@ -127,8 +127,13 @@ import {
 } from './features/editor/viewMode';
 import { buildQuestionTypes } from './features/editor/questionTypeConfig';
 import { buildQuestionSections } from './features/editor/sectionLayout';
+import { getCategoryButtonClass, getCategoryButtonLabel } from './features/editor/categoryButtons';
 import { getSectionGridClass, getSectionItemSpanClass } from './features/editor/sectionGrid';
 import { buildToolboxSections } from './features/editor/toolboxSections';
+import {
+  getSubjectIndicatorClass,
+  shouldShowSubjectIndicator,
+} from './features/editor/toolboxIndicators';
 import { getTutorialStepHighlightClass } from './features/editor/tutorialHighlights';
 import { TUTORIAL_STEPS } from './features/editor/tutorialConfig';
 import { createDefaultResponseConfig } from './domain/responsePolicy';
@@ -1126,9 +1131,9 @@ const App = () => {
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`flex-1 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${activeCategory === cat.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={getCategoryButtonClass(activeCategory === cat.id)}
                   >
-                    {cat.label.split(' ')[0]}
+                    {getCategoryButtonLabel(cat.label)}
                   </button>
                 ))}
               </div>
@@ -1162,10 +1167,9 @@ const App = () => {
                             <span className="text-[9px] font-black text-slate-500 group-hover:text-indigo-900 leading-tight uppercase tracking-tight">
                               {type.label}
                             </span>
-                            {(type.subjects.includes('stem') ||
-                              type.subjects.includes('languages')) && (
+                            {shouldShowSubjectIndicator(type.subjects) && (
                               <div
-                                className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${type.subjects.includes('stem') ? 'bg-indigo-400' : 'bg-blue-400'}`}
+                                className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${getSubjectIndicatorClass(type.subjects)}`}
                               />
                             )}
                           </button>
