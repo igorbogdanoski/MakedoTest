@@ -133,6 +133,7 @@ import {
 import { buildQuestionTypes } from './features/editor/questionTypeConfig';
 import { buildQuestionSections } from './features/editor/sectionLayout';
 import { getCategoryButtonClass, getCategoryButtonLabel } from './features/editor/categoryButtons';
+import { applySchoolHeaderInput, buildSchoolHeaderValue } from './features/editor/headerInputs';
 import {
   getJsonImportButtonClass,
   getPasteButtonClass,
@@ -1413,14 +1414,9 @@ const App = () => {
                     <>
                       <input
                         className="block w-full text-xs font-black uppercase tracking-widest bg-slate-50 rounded px-2 py-1 outline-none border-b-2 border-transparent focus:border-indigo-500"
-                        value={`${testInfo.schoolType} ${testInfo.school}`}
+                        value={buildSchoolHeaderValue(testInfo)}
                         onChange={(e) => {
-                          const val = e.target.value.split(' ');
-                          setTestInfo({
-                            ...testInfo,
-                            schoolType: val[0],
-                            school: val.slice(1).join(' '),
-                          });
+                          setTestInfo(applySchoolHeaderInput(testInfo, e.target.value));
                         }}
                       />
                       <input
@@ -1432,7 +1428,7 @@ const App = () => {
                   ) : (
                     <>
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none">
-                        {testInfo.schoolType} {testInfo.school}
+                        {buildSchoolHeaderValue(testInfo)}
                       </span>
                       <h1 className="text-5xl font-black text-slate-900 tracking-tighter mt-4 leading-none">
                         {testInfo.subject}
@@ -1586,7 +1582,7 @@ const App = () => {
             <footer className="relative z-10 mt-40 pt-16 border-t-[6px] border-slate-900 flex justify-between items-end pb-8 text-slate-900 font-sans">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  {testInfo.schoolType} {testInfo.school} • v6.0 Pro
+                  {buildSchoolHeaderValue(testInfo)} • v6.0 Pro
                 </p>
                 <p className="text-[8px] font-bold text-slate-300 uppercase mt-1">
                   Автор: Игор Богданоски
