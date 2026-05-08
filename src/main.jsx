@@ -133,6 +133,12 @@ import {
 import { buildQuestionTypes } from './features/editor/questionTypeConfig';
 import { buildQuestionSections } from './features/editor/sectionLayout';
 import { getCategoryButtonClass, getCategoryButtonLabel } from './features/editor/categoryButtons';
+import {
+  getJsonImportButtonClass,
+  getPasteButtonClass,
+  getQtiExportButtonClass,
+  getQtiImportButtonClass,
+} from './features/editor/toolbarButtons';
 import { getSectionGridClass, getSectionItemSpanClass } from './features/editor/sectionGrid';
 import { buildToolboxSections } from './features/editor/toolboxSections';
 import {
@@ -882,10 +888,7 @@ const App = () => {
           className={`flex items-center gap-3 transition-all duration-500 ${getTutorialStepHighlightClass(showTutorial, tutorialStep, 5, 'ring-[8px] ring-indigo-500/50 shadow-2xl relative z-[120] bg-white rounded-3xl p-1')}`}
         >
           <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
-            <button
-              title="Увези JSON / AI Тест"
-              className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition relative flex items-center gap-1"
-            >
+            <button title="Увези JSON / AI Тест" className={getJsonImportButtonClass()}>
               <Cloud size={12} /> JSON
               <input
                 type="file"
@@ -923,7 +926,7 @@ const App = () => {
             <button
               onClick={() => setShowPasteModal(true)}
               title="Пастирај AI Код"
-              className="px-3 py-2 rounded-xl text-slate-400 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"
+              className={getPasteButtonClass()}
             >
               <Sparkles size={12} />
             </button>
@@ -962,16 +965,13 @@ const App = () => {
                 a.download = 'test-qti.xml';
                 a.click();
               }}
-              className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition flex items-center gap-1"
+              className={getQtiExportButtonClass()}
             >
               <Share2 size={12} /> QTI
             </button>
           </div>
           <div className="flex bg-slate-100 p-1 rounded-2xl mr-4 print:hidden gap-1">
-            <label
-              title="Увези QTI (XML)"
-              className="px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 transition cursor-pointer flex items-center gap-1"
-            >
+            <label title="Увези QTI (XML)" className={getQtiImportButtonClass()}>
               <History size={12} /> Увоз QTI
               <input
                 type="file"
