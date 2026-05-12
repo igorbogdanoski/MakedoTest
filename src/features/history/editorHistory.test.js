@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   cloneEditorState,
   createEditorSnapshot,
+  popUndoSnapshot,
   pushUndoSnapshot,
   snapshotHash,
 } from './editorHistory';
@@ -42,5 +43,17 @@ describe('editorHistory', () => {
     const copy = cloneEditorState(source);
     source.arr[0].x = 9;
     expect(copy.arr[0].x).toBe(1);
+  });
+
+  it('popUndoSnapshot returns last snapshot and remaining stack', () => {
+    const stack = [{ i: 1 }, { i: 2 }, { i: 3 }];
+    const { snapshot, remaining } = popUndoSnapshot(stack);
+    expect(snapshot).toEqual({ i: 3 });
+    expect(remaining).toEqual([{ i: 1 }, { i: 2 }]);
+  });
+
+  it('popUndoSnapshot handles empty stack', () => {
+    expect(popUndoSnapshot([])).toEqual({ snapshot: null, remaining: [] });
+    expect(popUndoSnapshot(null)).toEqual({ snapshot: null, remaining: [] });
   });
 });

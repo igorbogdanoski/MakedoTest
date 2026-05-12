@@ -21,6 +21,15 @@ export function pushUndoSnapshot(undoStack, snapshot, limit = DEFAULT_UNDO_LIMIT
   return next.slice(next.length - limit);
 }
 
+export function popUndoSnapshot(undoStack) {
+  if (!Array.isArray(undoStack) || undoStack.length === 0) {
+    return { snapshot: null, remaining: [] };
+  }
+  const snapshot = undoStack[undoStack.length - 1];
+  const remaining = undoStack.slice(0, -1);
+  return { snapshot, remaining };
+}
+
 export function snapshotHash({ testInfo, questions, activeTestId }) {
   return JSON.stringify({
     testInfo,

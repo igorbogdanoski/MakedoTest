@@ -44,8 +44,11 @@ import Question from './components/Question';
 import TeacherAnalyticsPanel from './features/analytics/TeacherAnalyticsPanel';
 import { buildDemoAttemptsFromQuestions } from './features/analytics/demoAttempts';
 import { importQuestionsFromVisionFile } from './features/import-export/vision';
+import { mapLegacyJsonImport } from './features/import-export/legacyJsonImport';
+import { buildQtiExportXml, parseQtiImport } from './features/import-export/qtiLegacy';
 import {
   createEditorSnapshot,
+  popUndoSnapshot,
   pushUndoSnapshot,
   snapshotHash,
 } from './features/history/editorHistory';
@@ -123,6 +126,35 @@ import {
   getGradingScaleGradesForDisplay,
   getGradingScaleThresholds,
 } from './features/editor/gradingScale';
+import { computeEstimatedMinutes, computeTotalPoints } from './features/editor/metrics';
+import { findDuplicateQuestionTexts } from './features/editor/quality';
+import { applyQuestionBloom, applyQuestionRagFeedback } from './features/editor/questionMeta';
+import { triggerOnEnterOrSpace } from './lib/keyboard';
+import { appendQuestionFromBank } from './features/editor/bankOps';
+import { FAB_QUICK_TYPES, getFabQuickTypeMeta } from './features/editor/fabConfig';
+import {
+  DELETE_TEST_CONFIRM_MESSAGE,
+  LOAD_TEST_CONFIRM_MESSAGE,
+  buildLoadTestState,
+} from './features/editor/testLoader';
+import {
+  applyNextLayout,
+  setTestInfoField,
+  toggleTestInfoFlag,
+} from './features/editor/testInfoOps';
+import { setTemporaryState } from './lib/temporaryState';
+import { createQuestion } from './features/editor/questionFactory';
+import { buildSessionStart } from './features/editor/sessionStart';
+import {
+  buildSaveMessage,
+  buildSavePayload,
+  buildVersionSnapshot,
+} from './features/editor/cloudSave';
+import {
+  reorderQuestions,
+  shuffleQuestionOptions,
+  shuffleQuestions,
+} from './features/editor/listOps';
 import { HELP_CONTENT } from './features/editor/helpContent';
 import {
   getNavViewButtonClass,
@@ -156,7 +188,6 @@ import {
   shouldAdvanceTutorialStep,
 } from './features/editor/tutorialUi';
 import { TUTORIAL_STEPS } from './features/editor/tutorialConfig';
-import { createDefaultResponseConfig } from './domain/responsePolicy';
 import TeacherVerifyPanel from './features/take/TeacherVerifyPanel';
 
 // i18n
@@ -258,38 +289,23 @@ const App = () => {
     },
   ]);
 
-  const totalPoints = useMemo(
-    () => questions.reduce((acc, q) => acc + Number(q.points || 0), 0),
-    [questions]
-  );
+  const totalPoints = useMemo(() => computeTotalPoints(questions), [questions]);
 
-  const estimatedTime = useMemo(() => {
-    return questions.reduce((acc, q) => {
-      let mins = 2;
-      if (q.difficulty === 'easy') mins = 1;
-      if (q.difficulty === 'hard') mins = 5;
-      if (['essay', 'multi-part'].includes(q.type)) mins += 5;
-      if (['table', 'diagram'].includes(q.type)) mins += 2;
-      return acc + mins;
-    }, 0);
-  }, [questions]);
+  const estimatedTime = useMemo(() => computeEstimatedMinutes(questions), [questions]);
 
   const gradingScale = useMemo(() => getGradingScaleThresholds(totalPoints), [totalPoints]);
 
   const analyticsAttempts = useMemo(() => buildDemoAttemptsFromQuestions(questions), [questions]);
 
   const setQuestionBloom = (questionId, bloomLevel) => {
-    setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, bloomLevel } : q)));
+    setQuestions((prev) => applyQuestionBloom(prev, questionId, bloomLevel));
   };
 
   const setQuestionRagFeedback = (questionId, ragFeedback) => {
-    setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, ragFeedback } : q)));
+    setQuestions((prev) => applyQuestionRagFeedback(prev, questionId, ragFeedback));
   };
 
-  const duplicates = useMemo(() => {
-    const texts = questions.map((q) => q.text.trim().toLowerCase()).filter((t) => t.length > 5);
-    return texts.filter((item, index) => texts.indexOf(item) !== index);
-  }, [questions]);
+  const duplicates = useMemo(() => findDuplicateQuestionTexts(questions), [questions]);
 
   const collabSessionId = useMemo(
     () => buildCollabSessionId({ activeTestId, userId: user?.uid }),
@@ -344,15 +360,14 @@ const App = () => {
   }, [testInfo, questions, activeTestId, isApplyingUndo]);
 
   const handleUndo = () => {
-    if (undoStack.length === 0) return;
-    const last = undoStack[undoStack.length - 1];
-    setUndoStack((prev) => prev.slice(0, -1));
+    const { snapshot, remaining } = popUndoSnapshot(undoStack);
+    if (!snapshot) return;
+    setUndoStack(remaining);
     setIsApplyingUndo(true);
-    setTestInfo(last.testInfo);
-    setQuestions(last.questions);
-    setActiveTestId(last.activeTestId || null);
-    setDuplicateAlert('Вратена е претходната верзија на тестот.');
-    setTimeout(() => setDuplicateAlert(null), 1800);
+    setTestInfo(snapshot.testInfo);
+    setQuestions(snapshot.questions);
+    setActiveTestId(snapshot.activeTestId || null);
+    setTemporaryState(setDuplicateAlert, 'Вратена е претходната верзија на тестот.', 1800);
   };
 
   const questionTypes = useMemo(() => buildQuestionTypes(), []);
@@ -493,11 +508,9 @@ const App = () => {
         hadLocalDivergence,
         remoteDisplayName: remoteName,
       });
-      setConflictHint(hint);
-      setTimeout(() => setConflictHint(''), 4200);
+      setTemporaryState(setConflictHint, hint, 4200, '');
 
-      setDuplicateAlert('Синхронизирани промени од колаборативна сесија.');
-      setTimeout(() => setDuplicateAlert(null), 1600);
+      setTemporaryState(setDuplicateAlert, 'Синхронизирани промени од колаборативна сесија.', 1600);
     };
 
     let channel = null;
@@ -515,8 +528,11 @@ const App = () => {
             setPresenceByActor(pruneStalePresenceMap(presenceMap || {}, Date.now()));
           },
           onError: () => {
-            setDuplicateAlert('RTDB sync не е достапен, локален collab fallback е активен.');
-            setTimeout(() => setDuplicateAlert(null), 1800);
+            setTemporaryState(
+              setDuplicateAlert,
+              'RTDB sync не е достапен, локален collab fallback е активен.',
+              1800
+            );
           },
         });
         usingRtdb = channel.supported;
@@ -633,83 +649,32 @@ const App = () => {
       }));
       setQuestions([...questions, ...imported]);
       const sourceText = result.source === 'tesseract' ? 'Tesseract fallback' : 'Vision API';
-      setDuplicateAlert(`Увезени ${imported.length} прашања (${sourceText}).`);
-      setTimeout(() => setDuplicateAlert(null), 2200);
+      setTemporaryState(
+        setDuplicateAlert,
+        `Увезени ${imported.length} прашања (${sourceText}).`,
+        2200
+      );
     } finally {
       setIsVisionImporting(false);
     }
   };
 
-  const triggerOnEnterOrSpace = (event, callback) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      callback();
-    }
-  };
-
   const addQuestion = (type) => {
-    const baseQ = {
-      id: Date.now(),
-      type,
-      text: '',
-      points: 5,
-      columns: type === 'multiple' || type === 'checklist' ? 2 : 1,
-      difficulty: 'medium',
-      responseConfig: createDefaultResponseConfig(type),
-    };
-    if (type === 'multiple' || type === 'checklist') {
-      baseQ.options = ['', '', ''];
-      baseQ.correct = 0;
-      baseQ.corrects = [];
-    } else if (type === 'true-false') {
-      baseQ.correct = 0;
-      baseQ.layout = 'horizontal';
-    } else if (type === 'matching' || type === 'multi-match') {
-      baseQ.matches = [
-        { s: '', a: '' },
-        { s: '', a: '' },
-      ];
-    } else if (type === 'table') {
-      baseQ.tableData = { rows: 3, cols: 3, data: {} };
-    } else if (type === 'selection') {
-      baseQ.text = 'Пример за {точен|погрешно}.';
-    } else if (type === 'section') {
-      baseQ.points = 0;
-      baseQ.fullWidth = true;
-      baseQ.text = 'НОВА СЕКЦИЈА';
-      baseQ.sectionLayout = testInfo.layout;
-    } else if (type === 'list' || type === 'ordering') {
-      baseQ.items = ['', '', ''];
-    } else if (type === 'statements') {
-      baseQ.items = [
-        { s: '', correct: 0 },
-        { s: '', correct: 0 },
-      ];
-    } else if (type === 'multi-part') {
-      baseQ.parts = ['', ''];
-    } else if (type === 'diagram') {
-      baseQ.embedType = 'image';
-      baseQ.embedUrl = '';
-      baseQ.imageUrl = '';
-    }
+    const baseQ = createQuestion(type, { sectionLayout: testInfo.layout });
     setQuestions([...questions, baseQ]);
   };
 
   const saveToBank = async (q) => {
     if (!user) return;
     await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'question_bank'), { ...q });
-    setDuplicateAlert('Додадено во банката!');
-    setTimeout(() => setDuplicateAlert(null), 2000);
+    setTemporaryState(setDuplicateAlert, 'Додадено во банката!', 2000);
   };
 
   const saveCurrentTest = async () => {
     if (!user) return;
     setIsSaving(true);
-    const payload = {
-      testInfo,
-      questions,
-      updatedAt: new Date().toISOString(),
-    };
+    const payload = buildSavePayload(testInfo, questions);
+    const wasExisting = Boolean(activeTestId);
     try {
       const testsCollection = collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests');
       let testId = activeTestId;
@@ -729,61 +694,36 @@ const App = () => {
 
       await addDoc(
         collection(db, 'artifacts', appId, 'users', user.uid, 'my_tests', testId, 'versions'),
-        {
-          source: 'manual-save',
-          createdAt: new Date().toISOString(),
-          snapshot: {
-            testInfo,
-            questions,
-          },
-        }
+        buildVersionSnapshot(testInfo, questions)
       );
 
-      setDuplicateAlert(
-        activeTestId
-          ? 'Тестот е ажуриран и архивиран како нова верзија!'
-          : 'Тестот е зачуван во Вашиот облак!'
-      );
+      setDuplicateAlert(buildSaveMessage(wasExisting));
     } catch (err) {
       alert('Грешка при зачувување.');
     } finally {
       setIsSaving(false);
-      setTimeout(() => setDuplicateAlert(null), 2000);
+      setTemporaryState(setDuplicateAlert, null, 2000);
     }
   };
 
   const randomizeQuestions = () => {
-    const shuffled = [...questions].sort(() => Math.random() - 0.5);
-    setQuestions(shuffled);
-    setDuplicateAlert('Прашањата се измешани!');
-    setTimeout(() => setDuplicateAlert(null), 2000);
+    setQuestions(shuffleQuestions(questions));
+    setTemporaryState(setDuplicateAlert, 'Прашањата се измешани!', 2000);
   };
 
   const randomizeAnswers = (qId) => {
-    setQuestions(
-      questions.map((q) => {
-        if (q.id === qId && q.options) {
-          const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
-          return { ...q, options: shuffledOptions };
-        }
-        return q;
-      })
-    );
+    setQuestions(shuffleQuestionOptions(questions, qId));
   };
 
   const moveQuestion = (idx, dir) => {
-    const newQs = [...questions];
-    const target = idx + dir;
-    if (target < 0 || target >= questions.length) return;
-    [newQs[idx], newQs[target]] = [newQs[target], newQs[idx]];
-    setQuestions(newQs);
+    setQuestions((prev) => reorderQuestions(prev, idx, dir));
   };
 
   const handleStart = (subject) => {
     if (subject) {
-      setTestInfo((prev) => ({ ...prev, subject }));
+      setTestInfo((prev) => buildSessionStart(prev, subject).nextTestInfo);
     }
-    setView('editor');
+    setView(buildSessionStart(testInfo, subject).nextView);
   };
 
   if (view === 'landing')
@@ -897,19 +837,7 @@ const App = () => {
                   reader.onload = (ev) => {
                     try {
                       const data = JSON.parse(ev.target.result);
-                      const newQs = data.map((q, i) => ({
-                        id: Date.now() + i,
-                        type: q.type || 'multiple',
-                        text: q.text || '',
-                        options:
-                          q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
-                        correct: q.correct ?? 0,
-                        points: q.points || 5,
-                        difficulty: q.difficulty || 'medium',
-                        columns: q.columns || 2,
-                        matches: q.matches || undefined,
-                        tableData: q.tableData || undefined,
-                      }));
+                      const newQs = mapLegacyJsonImport(data);
                       setQuestions([...questions, ...newQs]);
                     } catch (err) {
                       alert('Грешка при читање на JSON фајлот.');
@@ -943,17 +871,7 @@ const App = () => {
             <button
               title="Извези QTI (XML)"
               onClick={() => {
-                const qti = `<?xml version="1.0" encoding="UTF-8"?>
-<assessmentTest xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" title="${testInfo.subject}">
-  ${questions
-    .map(
-      (q) => `
-  <assessmentItem identifier="${q.id}" title="${q.type}">
-    <itemBody><p>${q.text}</p></itemBody>
-  </assessmentItem>`
-    )
-    .join('')}
-</assessmentTest>`;
+                const qti = buildQtiExportXml(testInfo, questions);
                 const blob = new Blob([qti], { type: 'text/xml' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -978,17 +896,7 @@ const App = () => {
                   if (!file) return;
                   const reader = new FileReader();
                   reader.onload = (ev) => {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(ev.target.result, 'text/xml');
-                    const items = xmlDoc.getElementsByTagName('assessmentItem');
-                    const newQs = Array.from(items).map((item, i) => ({
-                      id: Date.now() + i,
-                      type: 'multiple',
-                      text: item.getElementsByTagName('p')[0]?.textContent || 'Увезена задача',
-                      points: 5,
-                      options: ['', '', ''],
-                      correct: 0,
-                    }));
+                    const newQs = parseQtiImport(ev.target.result, new DOMParser());
                     if (newQs.length > 0) setQuestions([...questions, ...newQs]);
                   };
                   reader.readAsText(file);
@@ -1230,10 +1138,10 @@ const App = () => {
                     className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative group cursor-pointer hover:bg-white hover:border-indigo-100 transition shadow-sm"
                     role="button"
                     tabIndex={0}
-                    onClick={() => setQuestions([...questions, { ...bq, id: Date.now() }])}
+                    onClick={() => setQuestions(appendQuestionFromBank(questions, bq))}
                     onKeyDown={(e) =>
                       triggerOnEnterOrSpace(e, () =>
-                        setQuestions([...questions, { ...bq, id: Date.now() }])
+                        setQuestions(appendQuestionFromBank(questions, bq))
                       )
                     }
                   >
@@ -1270,26 +1178,24 @@ const App = () => {
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          'Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.'
-                        )
-                      ) {
-                        setActiveTestId(t.id);
-                        setQuestions(t.questions);
-                        setTestInfo(t.testInfo);
+                      if (window.confirm(LOAD_TEST_CONFIRM_MESSAGE)) {
+                        const next = buildLoadTestState(t);
+                        if (next) {
+                          setActiveTestId(next.activeTestId);
+                          setQuestions(next.questions);
+                          setTestInfo(next.testInfo);
+                        }
                       }
                     }}
                     onKeyDown={(e) =>
                       triggerOnEnterOrSpace(e, () => {
-                        if (
-                          window.confirm(
-                            'Дали сте сигурни дека сакате да го вчитате овој тест? Моменталните промени ќе бидат изгубени.'
-                          )
-                        ) {
-                          setActiveTestId(t.id);
-                          setQuestions(t.questions);
-                          setTestInfo(t.testInfo);
+                        if (window.confirm(LOAD_TEST_CONFIRM_MESSAGE)) {
+                          const next = buildLoadTestState(t);
+                          if (next) {
+                            setActiveTestId(next.activeTestId);
+                            setQuestions(next.questions);
+                            setTestInfo(next.testInfo);
+                          }
                         }
                       })
                     }
@@ -1304,7 +1210,7 @@ const App = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm('Избриши тест?')) {
+                          if (window.confirm(DELETE_TEST_CONFIRM_MESSAGE)) {
                             if (activeTestId === t.id) {
                               setActiveTestId(null);
                             }
@@ -1341,7 +1247,9 @@ const App = () => {
               <Layout size={14} className="text-slate-400" />
               <select
                 value={testInfo.alignment}
-                onChange={(e) => setTestInfo({ ...testInfo, alignment: e.target.value })}
+                onChange={(e) =>
+                  setTestInfo(setTestInfoField(testInfo, 'alignment', e.target.value))
+                }
                 className="bg-transparent text-[11px] font-black uppercase outline-none cursor-pointer"
               >
                 <option value="left">Лево порамнување</option>
@@ -1349,26 +1257,21 @@ const App = () => {
               </select>
             </div>
             <button
-              onClick={() => setTestInfo({ ...testInfo, zipGrade: !testInfo.zipGrade })}
+              onClick={() => setTestInfo(toggleTestInfoFlag(testInfo, 'zipGrade'))}
               className={getAdvancedToggleButtonClass(testInfo.zipGrade)}
             >
               <Hash size={14} />
               <span className="text-[11px] font-black uppercase">ZipGrade Стил</span>
             </button>
             <button
-              onClick={() => setTestInfo({ ...testInfo, subNumbering: !testInfo.subNumbering })}
+              onClick={() => setTestInfo(toggleTestInfoFlag(testInfo, 'subNumbering'))}
               className={getAdvancedToggleButtonClass(testInfo.subNumbering)}
             >
               <ListOrdered size={14} />
               <span className="text-[11px] font-black uppercase">Под-нумерирање</span>
             </button>
             <button
-              onClick={() =>
-                setTestInfo({
-                  ...testInfo,
-                  layout: getNextLayout(testInfo.layout),
-                })
-              }
+              onClick={() => setTestInfo(applyNextLayout(testInfo, getNextLayout))}
               className={getAdvancedToggleButtonClass(testInfo.layout === 'double')}
             >
               <Columns size={14} />
@@ -1377,7 +1280,7 @@ const App = () => {
               </span>
             </button>
             <button
-              onClick={() => setTestInfo({ ...testInfo, showScale: !testInfo.showScale })}
+              onClick={() => setTestInfo(toggleTestInfoFlag(testInfo, 'showScale'))}
               className={getAdvancedToggleButtonClass(testInfo.showScale)}
             >
               <Trophy size={14} />
@@ -1418,7 +1321,9 @@ const App = () => {
                         <input
                           className="block w-full text-4xl xl:text-[2.7rem] font-black tracking-tighter text-slate-900 bg-slate-50/80 rounded-2xl px-3 py-3 mt-3 outline-none border border-slate-100 focus:border-indigo-500 focus:bg-white transition"
                           value={testInfo.subject}
-                          onChange={(e) => setTestInfo({ ...testInfo, subject: e.target.value })}
+                          onChange={(e) =>
+                            setTestInfo(setTestInfoField(testInfo, 'subject', e.target.value))
+                          }
                         />
                       </>
                     ) : (
@@ -1440,7 +1345,9 @@ const App = () => {
                       <input
                         className="bg-transparent text-xl font-black w-10 text-center outline-none tabular-nums"
                         value={testInfo.grade}
-                        onChange={(e) => setTestInfo({ ...testInfo, grade: e.target.value })}
+                        onChange={(e) =>
+                          setTestInfo(setTestInfoField(testInfo, 'grade', e.target.value))
+                        }
                       />
                     </div>
                     <span className="text-[10px] font-black text-slate-300 block uppercase tracking-[0.3em] text-right max-w-[18ch]">
@@ -1635,20 +1542,23 @@ const App = () => {
       {shouldShowAddQuestionFAB(sidebarOpen, view) && (
         <div className="fixed bottom-10 left-10 z-[200] group">
           <div className="absolute bottom-full left-0 mb-4 flex flex-col gap-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all transform translate-y-4 group-hover:translate-y-0">
-            {['multiple', 'true-false', 'short-answer', 'section'].map((type) => (
-              <button
-                key={type}
-                onClick={() => addQuestion(type)}
-                className="bg-white border-2 border-indigo-100 p-4 rounded-2xl shadow-xl hover:border-indigo-600 hover:scale-105 transition-all flex items-center gap-3 whitespace-nowrap"
-              >
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                  {questionTypes.find((t) => t.id === type)?.icon || <Plus size={16} />}
-                </div>
-                <span className="text-[10px] font-black uppercase text-slate-600">
-                  {questionTypes.find((t) => t.id === type)?.label}
-                </span>
-              </button>
-            ))}
+            {FAB_QUICK_TYPES.map((type) => {
+              const meta = getFabQuickTypeMeta(type, questionTypes);
+              return (
+                <button
+                  key={type}
+                  onClick={() => addQuestion(type)}
+                  className="bg-white border-2 border-indigo-100 p-4 rounded-2xl shadow-xl hover:border-indigo-600 hover:scale-105 transition-all flex items-center gap-3 whitespace-nowrap"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    {meta?.icon || <Plus size={16} />}
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-slate-600">
+                    {meta?.label}
+                  </span>
+                </button>
+              );
+            })}
             <button
               onClick={() => setSidebarOpen(true)}
               className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl hover:bg-indigo-600 transition flex items-center gap-3"
@@ -1708,23 +1618,11 @@ const App = () => {
                 onClick={() => {
                   try {
                     const data = JSON.parse(pasteValue);
-                    const newQs = data.map((q, i) => ({
-                      id: Date.now() + i,
-                      type: q.type || 'multiple',
-                      text: q.text || '',
-                      options: q.options || (q.type === 'multiple' ? ['', '', '', ''] : undefined),
-                      correct: q.correct ?? 0,
-                      points: q.points || 5,
-                      difficulty: q.difficulty || 'medium',
-                      columns: q.columns || 2,
-                      matches: q.matches || undefined,
-                      tableData: q.tableData || undefined,
-                    }));
+                    const newQs = mapLegacyJsonImport(data);
                     setQuestions([...questions, ...newQs]);
                     setShowPasteModal(false);
                     setPasteValue('');
-                    setDuplicateAlert('Успешно увезени задачи!');
-                    setTimeout(() => setDuplicateAlert(null), 2000);
+                    setTemporaryState(setDuplicateAlert, 'Успешно увезени задачи!', 2000);
                   } catch (err) {
                     alert('Невалиден JSON формат. Ве молиме проверете го кодот.');
                   }
